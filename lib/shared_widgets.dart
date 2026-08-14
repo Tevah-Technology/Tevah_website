@@ -522,7 +522,7 @@ class _AgencyFooterState extends State<AgencyFooter> {
   }
 
   void _copyEmail() {
-    Clipboard.setData(const ClipboardData(text: 'hello@tevah.tech'));
+    Clipboard.setData(const ClipboardData(text: 'support@tevah.technology'));
     setState(() => _isCopied = true);
     Timer(const Duration(seconds: 2), () {
       if (mounted) setState(() => _isCopied = false);
@@ -613,14 +613,14 @@ class _AgencyFooterState extends State<AgencyFooter> {
                               ),
                             ),
                             const SizedBox(width: 40),
-                            _FooterInteractiveNavColumn(
-                              title: 'EXPLORE',
-                              links: const [
-                                {'label': 'About', 'route': NavRoute.about},
-                                {'label': 'Portfolio', 'route': NavRoute.portfolio},
-                                {'label': 'Dropbox', 'route': NavRoute.dropbox},
-                              ],
-                            ),
+                            // _FooterInteractiveNavColumn(
+                            //   title: 'EXPLORE',
+                            //   links: const [
+                            //     {'label': 'About', 'route': NavRoute.about},
+                            //     {'label': 'Portfolio', 'route': NavRoute.portfolio},
+                            //     {'label': 'Dropbox', 'route': NavRoute.dropbox},
+                            //   ],
+                            // ),
                             const SizedBox(width: 60),
                             _FooterInteractiveNavColumn(
                               title: 'SERVICES',
@@ -727,7 +727,7 @@ class _MajorEmailSection extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'hello@tevah.tech',
+              'support@tevah.tech',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -754,7 +754,7 @@ class _MajorEmailSection extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isCopied ? 'COPIED' : 'COPY EMAIL',
+                      isCopied ? 'COPIED' : ' ',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
@@ -1066,7 +1066,7 @@ class FloatingWhatsAppButton extends StatefulWidget {
 
   const FloatingWhatsAppButton({
     super.key,
-    this.phoneNumber = '9198000000',
+    this.phoneNumber = '9188075549',
     this.defaultMessage = 'Hello TEVAH team, I would like to discuss a project!',
   });
 

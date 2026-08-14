@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'letstalk.dart';
 import 'shared_widgets.dart';
 import 'about_screen.dart';
 
@@ -2053,25 +2054,45 @@ class TestimonialsSection extends StatelessWidget {
 class FinalCtaSection extends StatelessWidget {
   final ValueChanged<bool> onHoverItem;
 
-  const FinalCtaSection({super.key, required this.onHoverItem});
+  const FinalCtaSection({
+    super.key,
+    required this.onHoverItem,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final bool isMobile = screenWidth < 768;
-    final double padding = isMobile ? 16.0 : 48.0;
+    final double screenWidth =
+        MediaQuery.of(context).size.width;
+
+    final bool isMobile =
+        screenWidth < 768;
+
+    final double padding =
+    isMobile ? 16.0 : 48.0;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: padding),
+      padding: EdgeInsets.symmetric(
+        horizontal: padding,
+      ),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: isMobile ? 60 : 100, horizontal: isMobile ? 24 : 60),
+        padding: EdgeInsets.symmetric(
+          vertical: isMobile ? 60 : 100,
+          horizontal: isMobile ? 24 : 60,
+        ),
         decoration: BoxDecoration(
           color: AppTheme.darkCard,
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: AppTheme.greyBorder),
+          border: Border.all(
+            color: AppTheme.greyBorder,
+          ),
         ),
         child: Column(
           children: [
+
+            // ======================================================
+            // SMALL TITLE
+            // ======================================================
+
             Text(
               'HAVE AN IDEA?',
               style: GoogleFonts.plusJakartaSans(
@@ -2081,7 +2102,13 @@ class FinalCtaSection extends StatelessWidget {
                 letterSpacing: 3.0,
               ),
             ),
+
             const SizedBox(height: 20),
+
+            // ======================================================
+            // MAIN TITLE
+            // ======================================================
+
             Text(
               "LET'S\nBUILD IT.",
               textAlign: TextAlign.center,
@@ -2089,37 +2116,104 @@ class FinalCtaSection extends StatelessWidget {
                 fontSize: isMobile ? 48 : 90,
                 fontWeight: FontWeight.w900,
                 height: 0.95,
-                letterSpacing: isMobile ? -1.0 : -3.0,
+                letterSpacing:
+                isMobile ? -1.0 : -3.0,
                 color: Colors.white,
               ),
             ),
+
             const SizedBox(height: 40),
+
+            // ======================================================
+            // START PROJECT BUTTON
+            // ======================================================
+
             MouseRegion(
-              onEnter: (_) => onHoverItem(true),
-              onExit: (_) => onHoverItem(false),
+              onEnter: (_) {
+                onHoverItem(true);
+              },
+
+              onExit: (_) {
+                onHoverItem(false);
+              },
+
               child: ElevatedButton(
-                onPressed: () {},
+                // ==================================================
+                // OPEN LET'S TALK MODAL
+                // ==================================================
+
+                onPressed: () {
+                  debugPrint(
+                    '🚀 START A PROJECT CLICKED',
+                  );
+
+                  openLetsTalkModal(context);
+                },
+
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.brandRed,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 32 : 48, vertical: isMobile ? 16 : 24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(40),
+                  backgroundColor:
+                  AppTheme.brandRed,
+
+                  foregroundColor:
+                  Colors.white,
+
+                  padding:
+                  EdgeInsets.symmetric(
+                    horizontal:
+                    isMobile ? 32 : 48,
+                    vertical:
+                    isMobile ? 16 : 24,
+                  ),
+
+                  shape:
+                  RoundedRectangleBorder(
+                    borderRadius:
+                    BorderRadius.circular(40),
                   ),
                 ),
+
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize:
+                  MainAxisSize.min,
+
                   children: [
+
+                    // ============================================
+                    // BUTTON TEXT
+                    // ============================================
+
                     Text(
                       'START A PROJECT',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
-                        fontSize: isMobile ? 13 : 16,
-                        letterSpacing: 1.5,
+                      style:
+                      GoogleFonts
+                          .plusJakartaSans(
+                        fontWeight:
+                        FontWeight.bold,
+                        fontSize:
+                        isMobile
+                            ? 13
+                            : 16,
+                        letterSpacing:
+                        1.5,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.arrow_outward_rounded, size: isMobile ? 18 : 22),
+
+                    const SizedBox(
+                      width: 8,
+                    ),
+
+                    // ============================================
+                    // ARROW
+                    // ============================================
+
+                    Icon(
+                      Icons
+                          .arrow_outward_rounded,
+                      size:
+                      isMobile
+                          ? 18
+                          : 22,
+                    ),
                   ],
                 ),
               ),
