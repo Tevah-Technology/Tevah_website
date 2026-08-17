@@ -139,22 +139,22 @@ class TevahNavbar extends StatelessWidget {
                   _navigate(context, NavRoute.about);
                 },
               ),
-              _MobileNavItem(
-                text: 'Portfolio',
-                isActive: currentRoute == NavRoute.portfolio,
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _navigate(context, NavRoute.portfolio);
-                },
-              ),
-              _MobileNavItem(
-                text: 'Dropbox',
-                isActive: currentRoute == NavRoute.dropbox,
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _navigate(context, NavRoute.dropbox);
-                },
-              ),
+              // _MobileNavItem(
+              //   text: 'Portfolio',
+              //   isActive: currentRoute == NavRoute.portfolio,
+              //   onTap: () {
+              //     Navigator.of(context).pop();
+              //     _navigate(context, NavRoute.portfolio);
+              //   },
+              // ),
+              // _MobileNavItem(
+              //   text: 'Dropbox',
+              //   isActive: currentRoute == NavRoute.dropbox,
+              //   onTap: () {
+              //     Navigator.of(context).pop();
+              //     _navigate(context, NavRoute.dropbox);
+              //   },
+              // ),
               const SizedBox(height: 24),
 
               // Mobile action button
@@ -285,13 +285,13 @@ class TevahNavbar extends StatelessWidget {
                     onTap: () => _navigate(context, NavRoute.about),
                     onHover: (h) => onHoverItem?.call(h),
                   ),
-                  // const SizedBox(width: 24),
-                  // _NavItem(
-                  //   text: 'Portfolio',
-                  //   isActive: currentRoute == NavRoute.portfolio,
-                  //   onTap: () => _navigate(context, NavRoute.portfolio),
-                  //   onHover: (h) => onHoverItem?.call(h),
-                  // ),
+                  const SizedBox(width: 24),
+                  _NavItem(
+                    text: 'Portfolio',
+                    isActive: currentRoute == NavRoute.portfolio,
+                    onTap: () => _navigate(context, NavRoute.portfolio),
+                    onHover: (h) => onHoverItem?.call(h),
+                  ),
                   // const SizedBox(width: 24),
                   // _NavItem(
                   //   text: 'Dropbox',

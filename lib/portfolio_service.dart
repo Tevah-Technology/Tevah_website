@@ -6,180 +6,449 @@ class PortfolioService {
   // ============================================================
   // BACKEND URL
   // ============================================================
-  //
-  // IMPORTANT:
-  // This must be your BACKEND URL.
-  //
-  // NOT:
-  // https://thevah.vercel.app
-  //
-  // unless your backend API is actually hosted there.
-  //
-  static const String baseUrl = 'https://YOUR-BACKEND-URL.com';
+
+  static const String baseUrl = 'http://localhost:3000';
 
   // ============================================================
-  // GET ALL PORTFOLIO
+  // GET PORTFOLIO
   // ============================================================
 
   Future<List<Map<String, dynamic>>> getPortfolio() async {
-    final uri = Uri.parse('$baseUrl/api/portfolio');
+    final uri = Uri.parse(
+      '$baseUrl/api/portfolio',
+    );
+
+    print('');
+    print('==============================================');
+    print('THEVA PORTFOLIO API');
+    print('==============================================');
+    print('GET: $uri');
+    print('==============================================');
 
     try {
-      print('==========================================');
-      print('PORTFOLIO REQUEST');
-      print('URL: $uri');
-      print('==========================================');
-
       final response = await http.get(
         uri,
-        headers: const {
+        headers: {
           'Accept': 'application/json',
         },
       );
 
-      print('STATUS: ${response.statusCode}');
-      print('CONTENT TYPE: ${response.headers['content-type']}');
-      print('RESPONSE: ${response.body}');
+      // ==========================================================
+      // RESPONSE STATUS
+      // ==========================================================
 
-      // ----------------------------------------------------------
-      // HTTP ERROR
-      // ----------------------------------------------------------
+      print('');
+      print('--------------- API RESPONSE ----------------');
+      print('Status Code: ${response.statusCode}');
+      print('Response Headers: ${response.headers}');
+      print('----------------------------------------------');
 
-      if (response.statusCode < 200 ||
-          response.statusCode >= 300) {
+      // Print complete raw response
+      print('RAW RESPONSE:');
+      print(response.body);
+
+      print('----------------------------------------------');
+
+      // ==========================================================
+      // STATUS CHECK
+      // ==========================================================
+
+      if (response.statusCode != 200) {
+        print(
+          '❌ Portfolio API failed with status '
+              '${response.statusCode}',
+        );
+
         throw Exception(
-          'Portfolio API failed.\n'
-              'Status: ${response.statusCode}\n'
-              'Response: ${response.body}',
+          'Portfolio API failed: ${response.statusCode}',
         );
       }
 
-      // ----------------------------------------------------------
-      // CHECK CONTENT TYPE
-      // ----------------------------------------------------------
-
-      final contentType =
-          response.headers['content-type'] ?? '';
-
-      if (!contentType.contains('application/json')) {
-        throw Exception(
-          'Portfolio API did not return JSON.\n\n'
-              'URL: $uri\n\n'
-              'Content-Type: $contentType\n\n'
-              'Response:\n${response.body}',
-        );
-      }
-
-      // ----------------------------------------------------------
-      // DECODE JSON
-      // ----------------------------------------------------------
+      // ==========================================================
+      // JSON DECODE
+      // ==========================================================
 
       dynamic decoded;
 
       try {
         decoded = jsonDecode(response.body);
-      } catch (e) {
+      } catch (error) {
+        print('❌ JSON DECODE ERROR: $error');
+
         throw Exception(
-          'Invalid JSON returned by portfolio API.\n'
-              'Error: $e\n\n'
-              'Response:\n${response.body}',
+          'Invalid JSON response from portfolio API.',
         );
       }
 
-      // ----------------------------------------------------------
-      // RESPONSE IS DIRECT ARRAY
-      // ----------------------------------------------------------
+      print('');
+      print('--------------- DECODED DATA ----------------');
+      print(
+        const JsonEncoder.withIndent('  ').convert(decoded),
+      );
+      print('----------------------------------------------');
 
-      if (decoded is List) {
-        return decoded
-            .whereType<Map>()
-            .map<Map<String, dynamic>>(
-              (item) => Map<String, dynamic>.from(item),
-        )
-            .toList();
+      // ==========================================================
+      // RESPONSE FORMAT CHECK
+      // ==========================================================
+
+      if (decoded is! Map<String, dynamic>) {
+        print('❌ Invalid portfolio response format.');
+
+        throw Exception(
+          'Invalid portfolio response.',
+        );
       }
 
-      // ----------------------------------------------------------
-      // RESPONSE IS OBJECT
-      // ----------------------------------------------------------
+      // ==========================================================
+      // SUCCESS CHECK
+      // ==========================================================
 
-      if (decoded is Map) {
-        final map =
-        Map<String, dynamic>.from(decoded);
+      if (decoded['success'] != true) {
+        final message =
+            decoded['message']?.toString() ??
+                'Failed to load portfolio.';
 
-        // Example:
-        //
-        // {
-        //   "data": [...]
-        // }
+        print('❌ API returned success=false');
+        print('Message: $message');
 
-        final data = map['data'];
-
-        if (data is List) {
-          return data
-              .whereType<Map>()
-              .map<Map<String, dynamic>>(
-                (item) =>
-            Map<String, dynamic>.from(item),
-          )
-              .toList();
-        }
-
-        // Example:
-        //
-        // {
-        //   "portfolio": [...]
-        // }
-
-        final portfolio = map['portfolio'];
-
-        if (portfolio is List) {
-          return portfolio
-              .whereType<Map>()
-              .map<Map<String, dynamic>>(
-                (item) =>
-            Map<String, dynamic>.from(item),
-          )
-              .toList();
-        }
+        throw Exception(message);
       }
+
+      // ==========================================================
+      // GET DATA
+      // ==========================================================
+
+      final data = decoded['data'];
+
+      print('');
+      print('--------------- PORTFOLIO DATA ---------------');
+      print('Data type: ${data.runtimeType}');
+      print(
+        'Number of projects: '
+            '${data is List ? data.length : 0}',
+      );
+      print('----------------------------------------------');
+
+      if (data is! List) {
+        print('⚠️ API data is not a List.');
+        return [];
+      }
+
+      // ==========================================================
+      // NORMALIZE PROJECTS
+      // ==========================================================
+
+      final List<Map<String, dynamic>> projects = [];
+
+      for (int i = 0; i < data.length; i++) {
+        final raw = data[i];
+
+        if (raw is! Map) {
+          print(
+            '⚠️ Skipping invalid project at index $i',
+          );
+          continue;
+        }
+
+        final item =
+        Map<String, dynamic>.from(raw);
+
+        print('');
+        print('==============================================');
+        print('PROJECT ${i + 1}');
+        print('==============================================');
+
+        print(
+          const JsonEncoder.withIndent('  ').convert(item),
+        );
+
+        final normalized =
+        _normalizePortfolioItem(
+          item,
+          i,
+        );
+
+        projects.add(normalized);
+
+        print('');
+        print('NORMALIZED PROJECT:');
+
+        print(
+          const JsonEncoder.withIndent('  ')
+              .convert(normalized),
+        );
+      }
+
+      // ==========================================================
+      // FINAL RESULT
+      // ==========================================================
+
+      print('');
+      print('==============================================');
+      print('PORTFOLIO LOADED');
+      print('Total Projects: ${projects.length}');
+      print('==============================================');
+
+      for (final project in projects) {
+        print(
+          '${project['num']} | '
+              '${project['title']} | '
+              '${project['category']}',
+        );
+
+        print(
+          'Thumbnail: ${project['thumbnailUrl']}',
+        );
+
+        print(
+          'Video: ${project['videoUrl']}',
+        );
+
+        print('----------------------------------------------');
+      }
+
+      return projects;
+    } catch (error) {
+      print('');
+      print('==============================================');
+      print('❌ PORTFOLIO API ERROR');
+      print('==============================================');
+      print(error);
+      print('==============================================');
 
       throw Exception(
-        'Invalid portfolio response structure.\n'
-            'Expected a JSON array or an object containing '
-            '"data" or "portfolio".',
+        'Unable to load portfolio: $error',
       );
-    } catch (e) {
-      print('==========================================');
-      print('PORTFOLIO ERROR');
-      print(e);
-      print('==========================================');
-
-      rethrow;
     }
   }
 
   // ============================================================
-  // FILTER BY CATEGORY
+  // NORMALIZE BACKEND DATA
   // ============================================================
 
-  Future<List<Map<String, dynamic>>> getPortfolioByCategory(
-      String category,
-      ) async {
-    final items = await getPortfolio();
+  Map<String, dynamic> _normalizePortfolioItem(
+      Map<String, dynamic> item,
+      int index,
+      ) {
+    // ==========================================================
+    // TITLE
+    // ==========================================================
 
-    if (category.toUpperCase() == 'ALL') {
-      return items;
+    final title =
+        item['title']?.toString() ??
+            item['name']?.toString() ??
+            'Project';
+
+    // ==========================================================
+    // CATEGORY
+    // ==========================================================
+
+    final category = _normalizeCategory(
+      item['category']?.toString() ?? '',
+    );
+
+    // ==========================================================
+    // THUMBNAIL
+    // ==========================================================
+
+    final thumbnail =
+        item['thumbnail']?.toString() ??
+            item['thumbnailUrl']?.toString() ??
+            item['imageUrl']?.toString() ??
+            '';
+
+    // ==========================================================
+    // VIDEO
+    // ==========================================================
+
+    final videoUrl =
+        item['videoUrl']?.toString() ?? '';
+
+    // ==========================================================
+    // FILES
+    // ==========================================================
+
+    final files =
+    item['files'] is List
+        ? List<dynamic>.from(
+      item['files'],
+    )
+        : <dynamic>[];
+
+    return {
+      // Keep all backend fields
+      ...item,
+
+      // ========================================================
+      // UI FIELDS
+      // ========================================================
+
+      'num': _formatNumber(
+        index + 1,
+      ),
+
+      'title': title,
+
+      'category': category,
+
+      'imageUrl': thumbnail,
+
+      'thumbnailUrl': thumbnail,
+
+      'videoUrl': videoUrl,
+
+      'subtitle': _buildSubtitle(
+        category,
+      ),
+
+      'client':
+      item['client']?.toString() ??
+          'THEVA',
+
+      'year':
+      item['year']?.toString() ??
+          DateTime.now()
+              .year
+              .toString(),
+
+      'description':
+      item['description']?.toString() ??
+          '',
+
+      'overview':
+      item['overview']?.toString() ??
+          item['description']?.toString() ??
+          '',
+
+      'challenge':
+      item['challenge']?.toString() ??
+          '',
+
+      'solution':
+      item['solution']?.toString() ??
+          '',
+
+      'metrics': _stringList(
+        item['metrics'],
+      ),
+
+      'tags': _stringList(
+        item['tags'],
+      ),
+
+      'files': files,
+
+      'isFeatured':
+      item['isFeatured'] == true,
+
+      'isDataFeatured':
+      item['isDataFeatured'] == true,
+    };
+  }
+
+  // ============================================================
+  // CATEGORY NORMALIZATION
+  // ============================================================
+
+  String _normalizeCategory(
+      String category,
+      ) {
+    final value =
+    category
+        .trim()
+        .toUpperCase();
+
+    switch (value) {
+      case 'APP':
+      case 'APPS':
+      case 'APPLICATION':
+      case 'APPLICATIONS':
+        return 'APP';
+
+      case 'WEBSITE':
+      case 'WEBSITES':
+      case 'WEB':
+        return 'WEBSITE';
+
+      case 'LOGO':
+      case 'LOGOS':
+      case 'BRANDING':
+        return 'LOGO';
+
+      case 'VIDEO':
+      case 'VIDEOS':
+        return 'VIDEO';
+
+      case 'GRAPHIC':
+      case 'GRAPHICS':
+      case 'GRAPHIC DESIGN':
+      case 'GRAPHIC DESIGNS':
+      case 'GRAPHIC_DESIGNS':
+        return 'GRAPHIC DESIGNS';
+
+      default:
+        return value;
+    }
+  }
+
+  // ============================================================
+  // SUBTITLE
+  // ============================================================
+
+  String _buildSubtitle(
+      String category,
+      ) {
+    switch (category) {
+      case 'APP':
+        return 'Mobile Application';
+
+      case 'WEBSITE':
+        return 'Digital Website Experience';
+
+      case 'LOGO':
+        return 'Brand Identity & Logo Design';
+
+      case 'VIDEO':
+        return 'Cinematic Video Production';
+
+      case 'GRAPHIC DESIGNS':
+        return 'Creative Graphic Design';
+
+      default:
+        return 'Digital Experience';
+    }
+  }
+
+  // ============================================================
+  // STRING LIST
+  // ============================================================
+
+  List<String> _stringList(
+      dynamic value,
+      ) {
+    if (value is! List) {
+      return [];
     }
 
-    return items.where((item) {
-      final itemCategory =
-      item['category']
-          ?.toString()
-          .toUpperCase();
+    return value
+        .map(
+          (item) => item.toString(),
+    )
+        .where(
+          (item) => item.isNotEmpty,
+    )
+        .toList();
+  }
 
-      return itemCategory ==
-          category.toUpperCase();
-    }).toList();
+  // ============================================================
+  // NUMBER
+  // ============================================================
+
+  String _formatNumber(
+      int number,
+      ) {
+    return number
+        .toString()
+        .padLeft(2, '0');
   }
 }
