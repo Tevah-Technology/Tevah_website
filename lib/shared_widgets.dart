@@ -34,6 +34,8 @@ abstract class AppTheme {
   static const Color targetCream = Color(0xFFE0E0E0);
 }
 
+bool _portfolioAvailable = false;
+
 // ============================================================================
 // TEVAH NAVBAR (RESPONSIVE TOP NAVIGATION)
 // ============================================================================
@@ -139,14 +141,14 @@ class TevahNavbar extends StatelessWidget {
                   _navigate(context, NavRoute.about);
                 },
               ),
-              // _MobileNavItem(
-              //   text: 'Portfolio',
-              //   isActive: currentRoute == NavRoute.portfolio,
-              //   onTap: () {
-              //     Navigator.of(context).pop();
-              //     _navigate(context, NavRoute.portfolio);
-              //   },
-              // ),
+              _MobileNavItem(
+                text: 'Portfolio',
+                isActive: currentRoute == NavRoute.portfolio,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _navigate(context, NavRoute.portfolio);
+                },
+              ),
               // _MobileNavItem(
               //   text: 'Dropbox',
               //   isActive: currentRoute == NavRoute.dropbox,

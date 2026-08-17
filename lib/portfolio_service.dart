@@ -1,10 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class PortfolioService {
   // ============================================================
-  // BACKEND URL
+  // BACKEND
   // ============================================================
 
   static const String baseUrl = 'http://localhost:3000';
@@ -18,12 +19,12 @@ class PortfolioService {
       '$baseUrl/api/portfolio',
     );
 
-    print('');
-    print('==============================================');
-    print('THEVA PORTFOLIO API');
-    print('==============================================');
-    print('GET: $uri');
-    print('==============================================');
+    debugPrint('');
+    debugPrint('==============================================');
+    debugPrint('THEVA PORTFOLIO API');
+    debugPrint('==============================================');
+    debugPrint('GET: $uri');
+    debugPrint('==============================================');
 
     try {
       final response = await http.get(
@@ -33,110 +34,74 @@ class PortfolioService {
         },
       );
 
-      // ==========================================================
-      // RESPONSE STATUS
-      // ==========================================================
-
-      print('');
-      print('--------------- API RESPONSE ----------------');
-      print('Status Code: ${response.statusCode}');
-      print('Response Headers: ${response.headers}');
-      print('----------------------------------------------');
-
-      // Print complete raw response
-      print('RAW RESPONSE:');
-      print(response.body);
-
-      print('----------------------------------------------');
-
-      // ==========================================================
-      // STATUS CHECK
-      // ==========================================================
+      debugPrint('');
+      debugPrint('--------------- API RESPONSE ----------------');
+      debugPrint(
+        'Status Code: ${response.statusCode}',
+      );
+      debugPrint(
+        'Response Headers: ${response.headers}',
+      );
+      debugPrint('----------------------------------------------');
+      debugPrint('RAW RESPONSE:');
+      debugPrint(response.body);
+      debugPrint('----------------------------------------------');
 
       if (response.statusCode != 200) {
-        print(
-          '❌ Portfolio API failed with status '
-              '${response.statusCode}',
-        );
-
         throw Exception(
           'Portfolio API failed: ${response.statusCode}',
         );
       }
 
-      // ==========================================================
-      // JSON DECODE
-      // ==========================================================
-
-      dynamic decoded;
-
-      try {
-        decoded = jsonDecode(response.body);
-      } catch (error) {
-        print('❌ JSON DECODE ERROR: $error');
-
-        throw Exception(
-          'Invalid JSON response from portfolio API.',
-        );
-      }
-
-      print('');
-      print('--------------- DECODED DATA ----------------');
-      print(
-        const JsonEncoder.withIndent('  ').convert(decoded),
+      final decoded = jsonDecode(
+        response.body,
       );
-      print('----------------------------------------------');
 
-      // ==========================================================
-      // RESPONSE FORMAT CHECK
-      // ==========================================================
+      debugPrint('');
+      debugPrint('--------------- DECODED DATA ----------------');
+
+      const encoder = JsonEncoder.withIndent('  ');
+
+      debugPrint(
+        encoder.convert(decoded),
+      );
+
+      debugPrint('----------------------------------------------');
 
       if (decoded is! Map<String, dynamic>) {
-        print('❌ Invalid portfolio response format.');
-
         throw Exception(
           'Invalid portfolio response.',
         );
       }
 
-      // ==========================================================
-      // SUCCESS CHECK
-      // ==========================================================
-
       if (decoded['success'] != true) {
-        final message =
-            decoded['message']?.toString() ??
-                'Failed to load portfolio.';
-
-        print('❌ API returned success=false');
-        print('Message: $message');
-
-        throw Exception(message);
+        throw Exception(
+          decoded['message']?.toString() ??
+              'Failed to load portfolio.',
+        );
       }
-
-      // ==========================================================
-      // GET DATA
-      // ==========================================================
 
       final data = decoded['data'];
 
-      print('');
-      print('--------------- PORTFOLIO DATA ---------------');
-      print('Data type: ${data.runtimeType}');
-      print(
-        'Number of projects: '
-            '${data is List ? data.length : 0}',
+      debugPrint('');
+      debugPrint('--------------- PORTFOLIO DATA ---------------');
+      debugPrint(
+        'Data type: ${data.runtimeType}',
       );
-      print('----------------------------------------------');
 
       if (data is! List) {
-        print('⚠️ API data is not a List.');
+        debugPrint(
+          'Data is not a List.',
+        );
+
         return [];
       }
 
-      // ==========================================================
-      // NORMALIZE PROJECTS
-      // ==========================================================
+      debugPrint(
+        'Number of projects: ${data.length}',
+      );
+
+      debugPrint('----------------------------------------------');
 
       final List<Map<String, dynamic>> projects = [];
 
@@ -144,8 +109,8 @@ class PortfolioService {
         final raw = data[i];
 
         if (raw is! Map) {
-          print(
-            '⚠️ Skipping invalid project at index $i',
+          debugPrint(
+            'Skipping invalid item at index $i',
           );
           continue;
         }
@@ -153,13 +118,12 @@ class PortfolioService {
         final item =
         Map<String, dynamic>.from(raw);
 
-        print('');
-        print('==============================================');
-        print('PROJECT ${i + 1}');
-        print('==============================================');
-
-        print(
-          const JsonEncoder.withIndent('  ').convert(item),
+        debugPrint('');
+        debugPrint(
+          'PROJECT ${i + 1}',
+        );
+        debugPrint(
+          encoder.convert(item),
         );
 
         final normalized =
@@ -168,53 +132,28 @@ class PortfolioService {
           i,
         );
 
-        projects.add(normalized);
-
-        print('');
-        print('NORMALIZED PROJECT:');
-
-        print(
-          const JsonEncoder.withIndent('  ')
-              .convert(normalized),
+        projects.add(
+          normalized,
         );
       }
 
-      // ==========================================================
-      // FINAL RESULT
-      // ==========================================================
-
-      print('');
-      print('==============================================');
-      print('PORTFOLIO LOADED');
-      print('Total Projects: ${projects.length}');
-      print('==============================================');
-
-      for (final project in projects) {
-        print(
-          '${project['num']} | '
-              '${project['title']} | '
-              '${project['category']}',
-        );
-
-        print(
-          'Thumbnail: ${project['thumbnailUrl']}',
-        );
-
-        print(
-          'Video: ${project['videoUrl']}',
-        );
-
-        print('----------------------------------------------');
-      }
+      debugPrint('');
+      debugPrint('==============================================');
+      debugPrint('PORTFOLIO LOADED');
+      debugPrint(
+        'Total Projects: ${projects.length}',
+      );
+      debugPrint('==============================================');
+      debugPrint('');
 
       return projects;
     } catch (error) {
-      print('');
-      print('==============================================');
-      print('❌ PORTFOLIO API ERROR');
-      print('==============================================');
-      print(error);
-      print('==============================================');
+      debugPrint('');
+      debugPrint('==============================================');
+      debugPrint('PORTFOLIO ERROR');
+      debugPrint('==============================================');
+      debugPrint(error.toString());
+      debugPrint('==============================================');
 
       throw Exception(
         'Unable to load portfolio: $error',
@@ -223,33 +162,22 @@ class PortfolioService {
   }
 
   // ============================================================
-  // NORMALIZE BACKEND DATA
+  // NORMALIZE
   // ============================================================
 
   Map<String, dynamic> _normalizePortfolioItem(
       Map<String, dynamic> item,
       int index,
       ) {
-    // ==========================================================
-    // TITLE
-    // ==========================================================
-
     final title =
         item['title']?.toString() ??
             item['name']?.toString() ??
             'Project';
 
-    // ==========================================================
-    // CATEGORY
-    // ==========================================================
-
-    final category = _normalizeCategory(
+    final category =
+    _normalizeCategory(
       item['category']?.toString() ?? '',
     );
-
-    // ==========================================================
-    // THUMBNAIL
-    // ==========================================================
 
     final thumbnail =
         item['thumbnail']?.toString() ??
@@ -257,16 +185,10 @@ class PortfolioService {
             item['imageUrl']?.toString() ??
             '';
 
-    // ==========================================================
-    // VIDEO
-    // ==========================================================
-
     final videoUrl =
-        item['videoUrl']?.toString() ?? '';
-
-    // ==========================================================
-    // FILES
-    // ==========================================================
+        item['videoUrl']?.toString() ??
+            item['fileUrl']?.toString() ??
+            '';
 
     final files =
     item['files'] is List
@@ -276,28 +198,28 @@ class PortfolioService {
         : <dynamic>[];
 
     return {
-      // Keep all backend fields
       ...item,
 
-      // ========================================================
-      // UI FIELDS
-      // ========================================================
+      'num':
+      _formatNumber(index + 1),
 
-      'num': _formatNumber(
-        index + 1,
-      ),
+      'title':
+      title,
 
-      'title': title,
+      'category':
+      category,
 
-      'category': category,
+      'imageUrl':
+      thumbnail,
 
-      'imageUrl': thumbnail,
+      'thumbnailUrl':
+      thumbnail,
 
-      'thumbnailUrl': thumbnail,
+      'videoUrl':
+      videoUrl,
 
-      'videoUrl': videoUrl,
-
-      'subtitle': _buildSubtitle(
+      'subtitle':
+      _buildSubtitle(
         category,
       ),
 
@@ -328,15 +250,18 @@ class PortfolioService {
       item['solution']?.toString() ??
           '',
 
-      'metrics': _stringList(
+      'metrics':
+      _stringList(
         item['metrics'],
       ),
 
-      'tags': _stringList(
+      'tags':
+      _stringList(
         item['tags'],
       ),
 
-      'files': files,
+      'files':
+      files,
 
       'isFeatured':
       item['isFeatured'] == true,
@@ -347,7 +272,7 @@ class PortfolioService {
   }
 
   // ============================================================
-  // CATEGORY NORMALIZATION
+  // CATEGORY
   // ============================================================
 
   String _normalizeCategory(
