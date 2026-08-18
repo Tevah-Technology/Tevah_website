@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,14 +14,21 @@ class PortfolioScreen extends StatefulWidget {
   State<PortfolioScreen> createState() => _PortfolioScreenState();
 }
 
-class _PortfolioScreenState extends State<PortfolioScreen> {
+class _PortfolioScreenState extends State<PortfolioScreen>
+    with TickerProviderStateMixin {
   // ============================================================
   // CONTROLLERS & NOTIFIERS
   // ============================================================
   final ScrollController _scrollController = ScrollController();
-  final ValueNotifier<Offset> _cursorPosNotifier = ValueNotifier<Offset>(Offset.zero);
-  final ValueNotifier<bool> _isHoveringNotifier = ValueNotifier<bool>(false);
-  final ValueNotifier<double> _scrollOffsetNotifier = ValueNotifier<double>(0);
+  final ValueNotifier<Offset> _cursorPosNotifier =
+  ValueNotifier<Offset>(Offset.zero);
+  final ValueNotifier<bool> _isHoveringNotifier =
+  ValueNotifier<bool>(false);
+  final ValueNotifier<double> _scrollOffsetNotifier =
+  ValueNotifier<double>(0);
+
+  late final AnimationController _marqueeController;
+  late final AnimationController _auroraController;
 
   // ============================================================
   // SERVICE & STATE
@@ -37,7 +44,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   // ============================================================
   // LAZY LOADING
   // ============================================================
-  int _visibleProjectCount = 5;
+  int _visibleProjectCount = 6;
   bool _isLoadingMore = false;
   bool _hasMoreProjects = true;
 
@@ -54,6 +61,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+
+    _marqueeController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 24),
+    )..repeat();
+
+    _auroraController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat(reverse: true);
+
     _loadPortfolio();
   }
 
@@ -71,8 +89,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
       setState(() {
         _allPortfolioItems = items;
-        _visibleProjectCount = items.length > 5 ? 5 : items.length;
-        _hasMoreProjects = items.length > 5;
+        _visibleProjectCount = items.length > 6 ? 6 : items.length;
+        _hasMoreProjects = items.length > 6;
         _isLoading = false;
       });
     } catch (error) {
@@ -106,11 +124,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
     if (mounted) setState(() => _isLoadingMore = true);
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
 
     setState(() {
-      _visibleProjectCount += 5;
+      _visibleProjectCount += 6;
       if (_visibleProjectCount >= total) {
         _visibleProjectCount = total;
         _hasMoreProjects = false;
@@ -147,7 +165,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
   void _updateCursor({required bool hovering, String text = ''}) {
     _isHoveringNotifier.value = hovering;
-    if (mounted) {
+    if (_cursorText != text && mounted) {
       setState(() => _cursorText = text);
     }
   }
@@ -155,10 +173,12 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   void _openDetailsPage(Map<String, dynamic> item) {
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => AppDetailsPage(item: item),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            AppDetailsPage(item: item),
+        transitionsBuilder:
+            (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 400),
+        transitionDuration: const Duration(milliseconds: 300),
       ),
     );
   }
@@ -170,6 +190,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     _cursorPosNotifier.dispose();
     _isHoveringNotifier.dispose();
     _scrollOffsetNotifier.dispose();
+    _marqueeController.dispose();
+    _auroraController.dispose();
     super.dispose();
   }
 
@@ -177,7 +199,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 768;
-    final double horizontalPadding = isMobile ? 20 : 64;
+    final double horizontalPadding = isMobile ? 18 : 64;
 
     return MouseRegion(
       cursor: isMobile ? MouseCursor.defer : SystemMouseCursors.none,
@@ -186,23 +208,22 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         backgroundColor: AppTheme.darkBackground,
         body: Stack(
           children: [
-            // Ambient Radial Gradient
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(0.85, -0.65),
-                      radius: 1.3,
-                      colors: [
-                        AppTheme.brandRed.withOpacity(0.08),
-                        Colors.transparent,
-                      ],
-                    ),
+            if (!isMobile)
+              Positioned.fill(
+                child: RepaintBoundary(
+                  child: AnimatedBuilder(
+                    animation: _auroraController,
+                    builder: (context, _) {
+                      return CustomPaint(
+                        painter: _DynamicSpotlightPainter(
+                          auroraValue: _auroraController.value,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
-            ),
+
             CustomScrollView(
               controller: _scrollController,
               physics: const BouncingScrollPhysics(),
@@ -210,7 +231,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 SliverToBoxAdapter(
                   child: TevahNavbar(
                     currentRoute: NavRoute.portfolio,
-                    onHoverItem: (hovering) => _updateCursor(hovering: hovering),
+                    onHoverItem: (hovering) =>
+                        _updateCursor(hovering: hovering),
                   ),
                 ),
                 if (_isLoading)
@@ -221,7 +243,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 else if (_error != null)
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: _PortfolioError(error: _error!, onRetry: _loadPortfolio),
+                    child: _PortfolioError(
+                        error: _error!, onRetry: _loadPortfolio),
                   )
                 else if (_allPortfolioItems.isEmpty)
                     const SliverFillRemaining(
@@ -231,138 +254,119 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   else ...[
                       // HERO SECTION
                       SliverToBoxAdapter(
-                        child: ValueListenableBuilder<double>(
-                          valueListenable: _scrollOffsetNotifier,
-                          builder: (context, scrollOffset, child) {
-                            return _CinematicPortfolioHero(
-                              totalProjects: _allPortfolioItems.length,
-                              scrollOffset: scrollOffset,
-                            );
-                          },
-                        ),
-                      ),
-
-                      SliverToBoxAdapter(child: SizedBox(height: isMobile ? 32 : 56)),
-
-                      // CATEGORIES
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            child: Row(
-                              children: _categories.map((category) {
-                                final selected = _selectedCategory == category;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 250),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(30),
-                                      boxShadow: selected
-                                          ? [
-                                        BoxShadow(
-                                          color: AppTheme.brandRed.withOpacity(0.4),
-                                          blurRadius: 18,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ]
-                                          : [],
-                                    ),
-                                    child: ChoiceChip(
-                                      label: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        child: Text(category),
-                                      ),
-                                      selected: selected,
-                                      onSelected: (value) {
-                                        if (!value) return;
-                                        setState(() {
-                                          _selectedCategory = category;
-                                          _visibleProjectCount = 5;
-                                          _isLoadingMore = false;
-                                          _hasMoreProjects = true;
-                                        });
-                                      },
-                                      selectedColor: AppTheme.brandRed,
-                                      backgroundColor: AppTheme.darkCard.withOpacity(0.8),
-                                      labelStyle: GoogleFonts.plusJakartaSans(
-                                        fontSize: isMobile ? 11 : 12,
-                                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                                        letterSpacing: 0.8,
-                                        color: selected ? Colors.white : Colors.white70,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
-                                        side: BorderSide(
-                                          color: selected
-                                              ? AppTheme.brandRed
-                                              : Colors.white.withOpacity(0.08),
-                                          width: 1.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
+                        child: RepaintBoundary(
+                          child: ValueListenableBuilder<double>(
+                            valueListenable: _scrollOffsetNotifier,
+                            builder: (context, scrollOffset, child) {
+                              return _CinematicPortfolioHero(
+                                totalProjects: _allPortfolioItems.length,
+                                scrollOffset: scrollOffset,
+                              );
+                            },
                           ),
                         ),
                       ),
 
-                      SliverToBoxAdapter(child: SizedBox(height: isMobile ? 48 : 80)),
+                      SliverToBoxAdapter(
+                          child: SizedBox(height: isMobile ? 28 : 48)),
 
-                      // FEATURED SPOTLIGHT
-                      if (_selectedCategory == 'ALL' && _featuredItem != null) ...[
+                      // CATEGORIES
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding),
+                          child: _CategoryFilterBar(
+                            categories: _categories,
+                            selectedCategory: _selectedCategory,
+                            allItems: _allPortfolioItems,
+                            onCategorySelected: (category) {
+                              setState(() {
+                                _selectedCategory = category;
+                                _visibleProjectCount = 6;
+                                _isLoadingMore = false;
+                                _hasMoreProjects = true;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+
+                      SliverToBoxAdapter(
+                          child: SizedBox(height: isMobile ? 48 : 72)),
+
+                      // FEATURED SPOTLIGHT CARD (DEEP PARALLAX)
+                      if (_selectedCategory == 'ALL' &&
+                          _featuredItem != null) ...[
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: horizontalPadding),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
                               children: [
-                                const _SectionLabel(text: '01 // FEATURED SPOTLIGHT'),
-                                const SizedBox(height: 22),
+                                const _SectionLabel(
+                                    text: '01 // FEATURED SPOTLIGHT'),
+                                const SizedBox(height: 20),
                                 _FeaturedProjectHeroCard(
                                   item: _featuredItem!,
-                                  onTap: () => _openDetailsPage(_featuredItem!),
+                                  onTap: () =>
+                                      _openDetailsPage(_featuredItem!),
                                   onHoverChange: (hovering, text) =>
-                                      _updateCursor(hovering: hovering, text: text),
+                                      _updateCursor(
+                                          hovering: hovering, text: text),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        SliverToBoxAdapter(child: SizedBox(height: isMobile ? 64 : 100)),
+                        SliverToBoxAdapter(
+                            child: SizedBox(height: isMobile ? 64 : 96)),
                       ],
 
-                      // REEL SECTION
+                      // CONTINUOUS RUNNING TICKER
+                      SliverToBoxAdapter(
+                        child: RepaintBoundary(
+                          child: _MarqueeTicker(controller: _marqueeController),
+                        ),
+                      ),
+
+                      SliverToBoxAdapter(
+                          child: SizedBox(height: isMobile ? 64 : 96)),
+
+                      // SELECTED REEL
                       if (_selectedCategory == 'ALL') ...[
                         SliverToBoxAdapter(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
                             children: [
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                                child: const _SectionLabel(text: '02 // SELECTED REEL'),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: horizontalPadding),
+                                child: const _SectionLabel(
+                                    text: '02 // SELECTED REEL'),
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 20),
                               _HorizontalProjectReel(
                                 items: _allPortfolioItems,
                                 onTapItem: (item) => _openDetailsPage(item),
                                 onHoverItem: (hovering, text) =>
-                                    _updateCursor(hovering: hovering, text: text),
+                                    _updateCursor(
+                                        hovering: hovering, text: text),
                               ),
                             ],
                           ),
                         ),
-                        SliverToBoxAdapter(child: SizedBox(height: isMobile ? 64 : 100)),
+                        SliverToBoxAdapter(
+                            child: SizedBox(height: isMobile ? 64 : 96)),
                       ],
 
                       // ARCHIVE MATRIX
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding),
                           child: _SectionLabel(
                             text: _selectedCategory == 'ALL'
                                 ? '03 // ARCHIVE MATRIX'
@@ -371,16 +375,18 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                         ),
                       ),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
                       SliverPadding(
-                        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding),
                         sliver: SliverGrid(
-                          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          gridDelegate:
+                          SliverGridDelegateWithMaxCrossAxisExtent(
                             maxCrossAxisExtent: 640,
-                            mainAxisSpacing: isMobile ? 22 : 32,
-                            crossAxisSpacing: isMobile ? 18 : 32,
-                            childAspectRatio: isMobile ? 1.02 : 1.32,
+                            mainAxisSpacing: isMobile ? 22 : 30,
+                            crossAxisSpacing: isMobile ? 18 : 30,
+                            childAspectRatio: isMobile ? 1.05 : 1.35,
                           ),
                           delegate: SliverChildBuilderDelegate(
                                 (context, index) {
@@ -389,31 +395,32 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                                 item: item,
                                 onTap: () => _openDetailsPage(item),
                                 onHoverChange: (hovering, text) =>
-                                    _updateCursor(hovering: hovering, text: text),
-                              )
-                                  .animate()
-                                  .fadeIn(duration: 350.ms)
-                                  .slideY(begin: 0.06, end: 0, duration: 400.ms);
+                                    _updateCursor(
+                                        hovering: hovering, text: text),
+                              );
                             },
                             childCount: _filteredItems.length,
                           ),
                         ),
                       ),
 
-                      // SKELETON
+                      // LAZY LOADING SKELETON
                       if (_isLoadingMore)
                         SliverPadding(
-                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 32),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding, vertical: 28),
                           sliver: SliverGrid(
-                            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                            gridDelegate:
+                            SliverGridDelegateWithMaxCrossAxisExtent(
                               maxCrossAxisExtent: 640,
-                              mainAxisSpacing: isMobile ? 22 : 32,
-                              crossAxisSpacing: isMobile ? 18 : 32,
-                              childAspectRatio: isMobile ? 1.02 : 1.32,
+                              mainAxisSpacing: isMobile ? 22 : 30,
+                              crossAxisSpacing: isMobile ? 18 : 30,
+                              childAspectRatio: isMobile ? 1.05 : 1.35,
                             ),
                             delegate: SliverChildBuilderDelegate(
-                                  (context, index) => const _PortfolioSkeletonCard(),
-                              childCount: 4,
+                                  (context, index) =>
+                              const _PortfolioSkeletonCard(),
+                              childCount: 2,
                             ),
                           ),
                         ),
@@ -421,14 +428,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                       if (!_hasMoreProjects && _filteredItems.isNotEmpty)
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 48),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 40),
                             child: Center(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 18, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.03),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                                  border: Border.all(
+                                      color: Colors.white.withOpacity(0.05)),
                                 ),
                                 child: Text(
                                   '✦ ALL PROJECTS LOADED ✦',
@@ -444,14 +454,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                           ),
                         ),
 
-                      SliverToBoxAdapter(child: SizedBox(height: isMobile ? 80 : 130)),
+                      SliverToBoxAdapter(
+                          child: SizedBox(height: isMobile ? 70 : 110)),
 
-                      // PARTNERS
+                      // CLIENT LOGOS
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -475,10 +488,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 30),
+                              const SizedBox(height: 24),
                               Wrap(
-                                spacing: isMobile ? 24 : 48,
-                                runSpacing: isMobile ? 20 : 28,
+                                spacing: isMobile ? 18 : 36,
+                                runSpacing: isMobile ? 16 : 24,
                                 children: const [
                                   _ClientLogo(name: 'FINTECH LABS'),
                                   _ClientLogo(name: 'LOGIX GLOBAL'),
@@ -492,26 +505,28 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                         ),
                       ),
 
-                      SliverToBoxAdapter(child: SizedBox(height: isMobile ? 80 : 130)),
+                      SliverToBoxAdapter(
+                          child: SizedBox(height: isMobile ? 70 : 110)),
 
                       // CTA
                       SliverToBoxAdapter(
                         child: _PortfolioFinalCta(
                           onHoverItem: (hovering, text) =>
-                              _updateCursor(hovering: hovering, text: text),
+                              _updateCursor(
+                                  hovering: hovering, text: text),
                         ),
                       ),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 80)),
                       const SliverToBoxAdapter(child: AgencyFooter()),
-                      const SliverToBoxAdapter(child: SizedBox(height: 30)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
                     ],
               ],
             ),
 
             const FloatingWhatsAppButton(),
 
-            // CURSOR
+            // DUAL-RING CURSOR
             if (!isMobile)
               ValueListenableBuilder<Offset>(
                 valueListenable: _cursorPosNotifier,
@@ -519,47 +534,40 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   return ValueListenableBuilder<bool>(
                     valueListenable: _isHoveringNotifier,
                     builder: (context, hovering, child) {
-                      final size = hovering ? 86.0 : 20.0;
+                      final size = hovering ? 80.0 : 20.0;
                       return Positioned(
                         left: cursorPosition.dx - size / 2,
                         top: cursorPosition.dy - size / 2,
                         child: IgnorePointer(
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 140),
-                            curve: Curves.easeOutCubic,
+                            duration: const Duration(milliseconds: 100),
+                            curve: Curves.easeOut,
                             width: size,
                             height: size,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: hovering
-                                  ? AppTheme.brandRed.withOpacity(0.92)
+                                  ? AppTheme.brandRed.withOpacity(0.9)
                                   : Colors.transparent,
                               border: Border.all(
                                 color: hovering
                                     ? Colors.transparent
-                                    : Colors.white.withOpacity(0.65),
+                                    : Colors.white.withOpacity(0.6),
                                 width: 1.5,
                               ),
-                              boxShadow: hovering
-                                  ? [
-                                BoxShadow(
-                                  color: AppTheme.brandRed.withOpacity(0.5),
-                                  blurRadius: 24,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                                  : [],
                             ),
                             child: hovering && _cursorText.isNotEmpty
                                 ? Center(
                               child: Text(
                                 _cursorText,
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w800,
+                                style:
+                                GoogleFonts.plusJakartaSans(
+                                  fontWeight:
+                                  FontWeight.w800,
                                   fontSize: 10,
                                   color: Colors.white,
-                                  letterSpacing: 1.2,
+                                  letterSpacing: 1.0,
                                 ),
                               ),
                             )
@@ -574,6 +582,399 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ============================================================================
+// HIGH-PERFORMANCE EFFECTIVE WINDOW PARALLAX ENGINE
+// ============================================================================
+class _EffectiveParallaxBox extends StatelessWidget {
+  final Widget child;
+  final double parallaxIntensity;
+
+  const _EffectiveParallaxBox({
+    required this.child,
+    this.parallaxIntensity = 0.35,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Flow(
+          delegate: _SmoothParallaxFlowDelegate(
+            scrollable: Scrollable.of(context),
+            itemContext: context,
+            intensity: parallaxIntensity,
+          ),
+          children: [child],
+        );
+      },
+    );
+  }
+}
+
+class _SmoothParallaxFlowDelegate extends FlowDelegate {
+  final ScrollableState? scrollable;
+  final BuildContext itemContext;
+  final double intensity;
+
+  _SmoothParallaxFlowDelegate({
+    required this.scrollable,
+    required this.itemContext,
+    required this.intensity,
+  }) : super(repaint: scrollable?.position);
+
+  @override
+  BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) {
+    return BoxConstraints.tightFor(
+      width: constraints.maxWidth,
+      height: constraints.maxHeight * (1.0 + (intensity * 2)),
+    );
+  }
+
+  @override
+  void paintChildren(FlowPaintingContext context) {
+    if (scrollable == null) {
+      context.paintChild(0);
+      return;
+    }
+
+    final scrollableBox =
+    scrollable!.context.findRenderObject() as RenderBox?;
+    final itemBox = itemContext.findRenderObject() as RenderBox?;
+
+    if (scrollableBox == null || itemBox == null || !itemBox.hasSize) {
+      context.paintChild(0);
+      return;
+    }
+
+    final itemOffset = itemBox.localToGlobal(
+      Offset.zero,
+      ancestor: scrollableBox,
+    );
+
+    final viewportHeight = scrollable!.position.viewportDimension;
+    final itemCenterY = itemOffset.dy + (itemBox.size.height / 2);
+    final relativePosition = ((itemCenterY / viewportHeight) - 0.5).clamp(-0.8, 0.8);
+
+    final maxOffset = context.size.height * intensity;
+    final translateY = (-relativePosition * maxOffset) - maxOffset;
+
+    context.paintChild(
+      0,
+      transform: Matrix4.translationValues(0.0, translateY, 0.0),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SmoothParallaxFlowDelegate oldDelegate) {
+    return scrollable != oldDelegate.scrollable ||
+        itemContext != oldDelegate.itemContext ||
+        intensity != oldDelegate.intensity;
+  }
+}
+
+// ============================================================================
+// REDESIGNED CATEGORY FILTER BAR
+// ============================================================================
+class _CategoryFilterBar extends StatelessWidget {
+  final List<String> categories;
+  final String selectedCategory;
+  final List<Map<String, dynamic>> allItems;
+  final ValueChanged<String> onCategorySelected;
+
+  const _CategoryFilterBar({
+    required this.categories,
+    required this.selectedCategory,
+    required this.allItems,
+    required this.onCategorySelected,
+  });
+
+  int _getCount(String category) {
+    if (category == 'ALL') return allItems.length;
+    return allItems.where((item) {
+      final cat = item['category']?.toString().toUpperCase() ?? '';
+      return cat == category;
+    }).length;
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'APP':
+        return Icons.phone_iphone_rounded;
+      case 'WEBSITE':
+        return Icons.language_rounded;
+      case 'LOGO':
+        return Icons.interests_outlined;
+      case 'VIDEO':
+        return Icons.play_circle_outline_rounded;
+      case 'GRAPHIC DESIGNS':
+        return Icons.auto_awesome_outlined;
+      case 'ALL':
+      default:
+        return Icons.grid_view_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF141416),
+          borderRadius: BorderRadius.circular(34),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.08),
+            width: 1.2,
+          ),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: categories.map((category) {
+              final isSelected = selectedCategory == category;
+              final count = _getCount(category);
+              final icon = _getCategoryIcon(category);
+
+              return _CategoryFilterItem(
+                category: category,
+                isSelected: isSelected,
+                count: count,
+                icon: icon,
+                isMobile: isMobile,
+                onTap: () => onCategorySelected(category),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryFilterItem extends StatefulWidget {
+  final String category;
+  final bool isSelected;
+  final int count;
+  final IconData icon;
+  final bool isMobile;
+  final VoidCallback onTap;
+
+  const _CategoryFilterItem({
+    required this.category,
+    required this.isSelected,
+    required this.count,
+    required this.icon,
+    required this.isMobile,
+    required this.onTap,
+  });
+
+  @override
+  State<_CategoryFilterItem> createState() => _CategoryFilterItemState();
+}
+
+class _CategoryFilterItemState extends State<_CategoryFilterItem> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.isMobile ? 12 : 16,
+            vertical: widget.isMobile ? 7 : 9,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            color: widget.isSelected
+                ? AppTheme.brandRed
+                : _hovering
+                ? Colors.white.withOpacity(0.06)
+                : Colors.transparent,
+            border: Border.all(
+              color: widget.isSelected
+                  ? AppTheme.brandRed
+                  : _hovering
+                  ? Colors.white.withOpacity(0.12)
+                  : Colors.transparent,
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                size: widget.isMobile ? 13 : 15,
+                color: widget.isSelected
+                    ? Colors.white
+                    : _hovering
+                    ? Colors.white
+                    : Colors.white54,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                widget.category,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: widget.isMobile ? 11 : 12,
+                  fontWeight:
+                  widget.isSelected ? FontWeight.w800 : FontWeight.w600,
+                  letterSpacing: 0.8,
+                  color: widget.isSelected
+                      ? Colors.white
+                      : _hovering
+                      ? Colors.white
+                      : Colors.white60,
+                ),
+              ),
+              if (widget.count > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: widget.isSelected
+                        ? Colors.black.withOpacity(0.25)
+                        : Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${widget.count}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color:
+                      widget.isSelected ? Colors.white : Colors.white38,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// DYNAMIC SPOTLIGHT PAINTER
+// ============================================================================
+class _DynamicSpotlightPainter extends CustomPainter {
+  final double auroraValue;
+
+  _DynamicSpotlightPainter({required this.auroraValue});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final auroraCenter = Offset(
+      size.width * 0.85,
+      size.height * 0.28 + (math.sin(auroraValue * math.pi * 2) * 20),
+    );
+
+    final auroraPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          AppTheme.brandRed.withOpacity(0.08),
+          Colors.transparent,
+        ],
+      ).createShader(
+        Rect.fromCircle(center: auroraCenter, radius: size.width * 0.35),
+      );
+
+    canvas.drawCircle(auroraCenter, size.width * 0.35, auroraPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DynamicSpotlightPainter oldDelegate) =>
+      oldDelegate.auroraValue != auroraValue;
+}
+
+// ============================================================================
+// MARQUEE TICKER
+// ============================================================================
+class _MarqueeTicker extends StatelessWidget {
+  final AnimationController controller;
+
+  const _MarqueeTicker({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      'UI/UX ARCHITECTURE',
+      'HIGH-PERFORMANCE MOBILE',
+      'SCALABLE WEB PLATFORMS',
+      'BESPOKE BRANDING',
+      'CINEMATIC VIDEO EDITING',
+    ];
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return ClipRect(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.015),
+              border: Border.symmetric(
+                horizontal: BorderSide(color: Colors.white.withOpacity(0.05)),
+              ),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Row(
+                children: List.generate(3, (_) {
+                  return Row(
+                    children: items.map((text) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.brandRed,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              text,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white30,
+                                letterSpacing: 2.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                }),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -606,153 +1007,10 @@ class _SectionLabel extends StatelessWidget {
             fontSize: 11,
             fontWeight: FontWeight.w800,
             color: AppTheme.brandRed,
-            letterSpacing: 3,
+            letterSpacing: 2.5,
           ),
         ),
       ],
-    );
-  }
-}
-
-// ============================================================================
-// LOADING & ERROR & EMPTY STATES
-// ============================================================================
-class _PortfolioLoading extends StatelessWidget {
-  const _PortfolioLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppTheme.brandRed.withOpacity(0.1),
-              border: Border.all(color: AppTheme.brandRed.withOpacity(0.3)),
-            ),
-            child: const CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: AppTheme.brandRed,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'CURATING THEVAH ARCHIVE...',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 3,
-              color: Colors.white60,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PortfolioError extends StatelessWidget {
-  final String error;
-  final VoidCallback onRetry;
-
-  const _PortfolioError({required this.error, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 480),
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(36),
-        decoration: BoxDecoration(
-          color: AppTheme.darkCard,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.brandRed.withOpacity(0.12),
-              ),
-              child: const Icon(Icons.cloud_off_rounded, size: 40, color: AppTheme.brandRed),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'COULD NOT LOAD PORTFOLIO',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: 1,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5, color: Colors.white54),
-            ),
-            const SizedBox(height: 28),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.brandRed,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 8,
-                shadowColor: AppTheme.brandRed.withOpacity(0.4),
-              ),
-              child: Text(
-                'TRY AGAIN',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PortfolioEmpty extends StatelessWidget {
-  const _PortfolioEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.inventory_2_outlined, size: 48, color: Colors.white.withOpacity(0.2)),
-          const SizedBox(height: 16),
-          Text(
-            'NO PROJECTS AVAILABLE',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.white54,
-              letterSpacing: 2,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -773,60 +1031,57 @@ class _CinematicPortfolioHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final mobile = width < 768;
-    final parallax = (scrollOffset * 0.12).clamp(0, 80);
+    final textParallax = (scrollOffset * 0.35).clamp(0, 90);
 
     return SizedBox(
-      height: mobile ? 480 : 590,
+      height: mobile ? 460 : 540,
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _PortfolioGlowPainter(progress: scrollOffset / 1000),
-            ),
-          ),
           Positioned(
-            top: 70.0 - parallax.toDouble(),
+            top: 60.0 - textParallax.toDouble(),
             left: mobile ? 20 : 64,
             right: mobile ? 20 : 64,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: AppTheme.brandRed.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.brandRed.withOpacity(0.3)),
+                    border: Border.all(
+                        color: AppTheme.brandRed.withOpacity(0.3)),
                   ),
                   child: Text(
-                    'THEVAH // PORTFOLIO',
+                    'THEVAH // ARCHIVE',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.brandRed,
-                      letterSpacing: 2.5,
+                      letterSpacing: 2.2,
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
                 Text(
                   'WE BUILD\nDIGITAL\nEXPERIENCES.',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: mobile ? 46 : 84,
-                    height: 0.94,
+                    fontSize: mobile ? 44 : 78,
+                    height: 0.95,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
-                    letterSpacing: -3.5,
+                    letterSpacing: -3.0,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 580),
                   child: Text(
                     'A curated showcase of high-performance web systems, bespoke mobile architectures, and immersive brand designs.',
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: mobile ? 14 : 16,
-                      height: 1.7,
+                      fontSize: mobile ? 14 : 15,
+                      height: 1.65,
                       color: Colors.white60,
                       fontWeight: FontWeight.w400,
                     ),
@@ -836,7 +1091,7 @@ class _CinematicPortfolioHero extends StatelessWidget {
             ),
           ),
           Positioned(
-            bottom: 25,
+            bottom: 20,
             left: mobile ? 20 : 64,
             right: mobile ? 20 : 64,
             child: Row(
@@ -867,8 +1122,8 @@ class _CinematicPortfolioHero extends StatelessWidget {
                 if (!mobile)
                   Row(
                     children: [
-                      Container(width: 45, height: 1, color: Colors.white24),
-                      const SizedBox(width: 14),
+                      Container(width: 40, height: 1, color: Colors.white24),
+                      const SizedBox(width: 12),
                       Text(
                         'EXPLORE ARCHIVE',
                         style: GoogleFonts.plusJakartaSans(
@@ -889,33 +1144,6 @@ class _CinematicPortfolioHero extends StatelessWidget {
   }
 }
 
-class _PortfolioGlowPainter extends CustomPainter {
-  final double progress;
-
-  _PortfolioGlowPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width * 0.82, size.height * 0.35);
-    final radius = size.width * 0.35;
-
-    final paint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppTheme.brandRed.withOpacity(0.20),
-          AppTheme.brandRed.withOpacity(0.05),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-
-    canvas.drawCircle(center, radius, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _PortfolioGlowPainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
 // ============================================================================
 // FEATURED HERO CARD
 // ============================================================================
@@ -931,17 +1159,19 @@ class _FeaturedProjectHeroCard extends StatefulWidget {
   });
 
   @override
-  State<_FeaturedProjectHeroCard> createState() => _FeaturedProjectHeroCardState();
+  State<_FeaturedProjectHeroCard> createState() =>
+      _FeaturedProjectHeroCardState();
 }
 
 class _FeaturedProjectHeroCardState extends State<_FeaturedProjectHeroCard> {
-  bool hovering = false;
+  bool _hovering = false;
 
   String _string(String key) => widget.item[key]?.toString() ?? '';
 
   @override
   Widget build(BuildContext context) {
-    final title = _string('title').isNotEmpty ? _string('title') : _string('name');
+    final title =
+    _string('title').isNotEmpty ? _string('title') : _string('name');
     final mediaUrl = _getMediaUrl(widget.item);
     final category = _string('category').toUpperCase();
     final screenWidth = MediaQuery.of(context).size.width;
@@ -949,48 +1179,44 @@ class _FeaturedProjectHeroCardState extends State<_FeaturedProjectHeroCard> {
 
     return MouseRegion(
       onEnter: (_) {
-        setState(() => hovering = true);
+        setState(() => _hovering = true);
         widget.onHoverChange(true, 'EXPLORE');
       },
       onExit: (_) {
-        setState(() => hovering = false);
+        setState(() => _hovering = false);
         widget.onHoverChange(false, '');
       },
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeOutCubic,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
           height: height,
-          transform: Matrix4.identity()..translate(0.0, hovering ? -6.0 : 0.0),
+          transform: Matrix4.identity()
+            ..translate(0.0, _hovering ? -5.0 : 0.0),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: hovering ? AppTheme.brandRed.withOpacity(0.8) : Colors.white.withOpacity(0.1),
+              color: _hovering
+                  ? AppTheme.brandRed.withOpacity(0.8)
+                  : Colors.white.withOpacity(0.1),
               width: 1.5,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: hovering
-                    ? AppTheme.brandRed.withOpacity(0.22)
-                    : Colors.black.withOpacity(0.6),
-                blurRadius: hovering ? 36 : 20,
-                offset: const Offset(0, 12),
-              ),
-            ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _PortfolioMedia(
-                  url: mediaUrl,
-                  fit: BoxFit.cover,
-                  autoplay: true,
-                  muted: true,
-                  loop: true,
-                  showControls: false,
+                _EffectiveParallaxBox(
+                  parallaxIntensity: 0.35,
+                  child: _PortfolioMedia(
+                    url: mediaUrl,
+                    fit: BoxFit.cover,
+                    autoplay: true,
+                    muted: true,
+                    loop: true,
+                  ),
                 ),
                 Container(
                   decoration: BoxDecoration(
@@ -998,18 +1224,17 @@ class _FeaturedProjectHeroCardState extends State<_FeaturedProjectHeroCard> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.15),
-                        Colors.black.withOpacity(0.4),
-                        Colors.black.withOpacity(0.92),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.88),
                       ],
-                      stops: const [0.0, 0.4, 1.0],
+                      stops: const [0.3, 1.0],
                     ),
                   ),
                 ),
                 Positioned(
-                  left: 28,
-                  right: 28,
-                  bottom: 28,
+                  left: 24,
+                  right: 24,
+                  bottom: 24,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -1018,29 +1243,32 @@ class _FeaturedProjectHeroCardState extends State<_FeaturedProjectHeroCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 3.5),
                               decoration: BoxDecoration(
                                 color: AppTheme.brandRed.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppTheme.brandRed.withOpacity(0.4)),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color:
+                                    AppTheme.brandRed.withOpacity(0.4)),
                               ),
                               child: Text(
                                 category.isEmpty ? 'FEATURED' : category,
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 9,
+                                  fontSize: 8.5,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.brandRed,
-                                  letterSpacing: 2,
+                                  letterSpacing: 1.8,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
                               title.isEmpty ? 'PROJECT' : title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: screenWidth < 768 ? 24 : 34,
+                                fontSize: screenWidth < 768 ? 22 : 30,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 letterSpacing: -0.5,
@@ -1050,23 +1278,17 @@ class _FeaturedProjectHeroCardState extends State<_FeaturedProjectHeroCard> {
                         ),
                       ),
                       AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        width: hovering ? 56 : 48,
-                        height: hovering ? 56 : 48,
-                        decoration: BoxDecoration(
+                        duration: const Duration(milliseconds: 200),
+                        width: _hovering ? 50 : 44,
+                        height: _hovering ? 50 : 44,
+                        decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: AppTheme.brandRed,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.brandRed.withOpacity(0.5),
-                              blurRadius: 16,
-                            ),
-                          ],
                         ),
                         child: const Icon(
                           Icons.arrow_outward_rounded,
                           color: Colors.white,
-                          size: 22,
+                          size: 20,
                         ),
                       ),
                     ],
@@ -1102,7 +1324,7 @@ class _HorizontalProjectReel extends StatelessWidget {
     final visibleItems = items.take(8).toList();
 
     return SizedBox(
-      height: mobile ? 240 : 320,
+      height: mobile ? 220 : 280,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
@@ -1110,11 +1332,13 @@ class _HorizontalProjectReel extends StatelessWidget {
         itemCount: visibleItems.length,
         itemBuilder: (context, index) {
           final item = visibleItems[index];
-          final title = item['title']?.toString() ?? item['name']?.toString() ?? 'PROJECT';
+          final title = item['title']?.toString() ??
+              item['name']?.toString() ??
+              'PROJECT';
           final media = _getMediaUrl(item);
 
           return Padding(
-            padding: const EdgeInsets.only(right: 20),
+            padding: const EdgeInsets.only(right: 16),
             child: _ReelCard(
               title: title,
               media: media,
@@ -1149,71 +1373,70 @@ class _ReelCard extends StatefulWidget {
 }
 
 class _ReelCardState extends State<_ReelCard> {
-  bool hovering = false;
+  bool _hovering = false;
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth < 768 ? 220.0 : 310.0;
+    final cardWidth = screenWidth < 768 ? 200.0 : 280.0;
 
     return MouseRegion(
       onEnter: (_) {
-        setState(() => hovering = true);
+        setState(() => _hovering = true);
         widget.onHover(true);
       },
       onExit: (_) {
-        setState(() => hovering = false);
+        setState(() => _hovering = false);
         widget.onHover(false);
       },
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 200),
           width: cardWidth,
-          transform: Matrix4.identity()..translate(0.0, hovering ? -8.0 : 0.0),
+          transform: Matrix4.identity()
+            ..translate(0.0, _hovering ? -5.0 : 0.0),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: hovering ? AppTheme.brandRed : Colors.white.withOpacity(0.08),
+              color: _hovering
+                  ? AppTheme.brandRed
+                  : Colors.white.withOpacity(0.08),
               width: 1.2,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: hovering
-                    ? AppTheme.brandRed.withOpacity(0.18)
-                    : Colors.black.withOpacity(0.4),
-                blurRadius: hovering ? 24 : 12,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _PortfolioMedia(
-                  url: widget.media,
-                  fit: BoxFit.cover,
-                  autoplay: false,
-                  muted: true,
-                  loop: true,
-                  showControls: false,
+                _EffectiveParallaxBox(
+                  parallaxIntensity: 0.25,
+                  child: _PortfolioMedia(
+                    url: widget.media,
+                    fit: BoxFit.cover,
+                    autoplay: false,
+                    muted: true,
+                    loop: true,
+                  ),
                 ),
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.92)],
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.88)
+                      ],
                       stops: const [0.4, 1.0],
                     ),
                   ),
                 ),
                 Positioned(
-                  left: 18,
-                  bottom: 18,
-                  right: 18,
+                  left: 14,
+                  bottom: 14,
+                  right: 14,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1223,19 +1446,18 @@ class _ReelCardState extends State<_ReelCard> {
                           fontSize: 8,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.brandRed,
-                          letterSpacing: 2,
+                          letterSpacing: 1.8,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         widget.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
-                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
@@ -1269,49 +1491,43 @@ class _EditorialGridCard extends StatefulWidget {
 }
 
 class _EditorialGridCardState extends State<_EditorialGridCard> {
-  bool hovering = false;
+  bool _hovering = false;
 
   String _getString(String key) => widget.item[key]?.toString() ?? '';
 
   @override
   Widget build(BuildContext context) {
-    final title = _getString('title').isNotEmpty ? _getString('title') : _getString('name');
+    final title = _getString('title').isNotEmpty
+        ? _getString('title')
+        : _getString('name');
     final media = _getMediaUrl(widget.item);
     final category = _getString('category');
 
     return MouseRegion(
       onEnter: (_) {
-        setState(() => hovering = true);
+        setState(() => _hovering = true);
         widget.onHoverChange(true, 'OPEN');
       },
       onExit: (_) {
-        setState(() => hovering = false);
+        setState(() => _hovering = false);
         widget.onHoverChange(false, '');
       },
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          transform: Matrix4.identity()..translate(0.0, hovering ? -6.0 : 0.0),
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.identity()
+            ..translate(0.0, _hovering ? -5.0 : 0.0),
           decoration: BoxDecoration(
             color: AppTheme.darkCard,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: hovering ? AppTheme.brandRed : AppTheme.greyBorder,
+              color: _hovering ? AppTheme.brandRed : AppTheme.greyBorder,
               width: 1.2,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: hovering
-                    ? AppTheme.brandRed.withOpacity(0.15)
-                    : Colors.black.withOpacity(0.3),
-                blurRadius: hovering ? 24 : 10,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1319,37 +1535,31 @@ class _EditorialGridCardState extends State<_EditorialGridCard> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      _PortfolioMedia(
-                        url: media,
-                        fit: BoxFit.cover,
-                        autoplay: false,
-                        muted: true,
-                        loop: true,
-                        showControls: false,
-                      ),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        color: hovering
-                            ? AppTheme.brandRed.withOpacity(0.08)
-                            : Colors.transparent,
+                      _EffectiveParallaxBox(
+                        parallaxIntensity: 0.32,
+                        child: _PortfolioMedia(
+                          url: media,
+                          fit: BoxFit.cover,
+                          autoplay: false,
+                          muted: true,
+                          loop: true,
+                        ),
                       ),
                       Positioned(
-                        top: 14,
-                        right: 14,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          width: hovering ? 44 : 38,
-                          height: hovering ? 44 : 38,
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: hovering ? AppTheme.brandRed : Colors.black.withOpacity(0.55),
-                            border: Border.all(
-                              color: hovering ? Colors.transparent : Colors.white.withOpacity(0.1),
-                            ),
+                            color: _hovering
+                                ? AppTheme.brandRed
+                                : Colors.black.withOpacity(0.6),
                           ),
                           child: const Icon(
                             Icons.arrow_outward_rounded,
-                            size: 18,
+                            size: 16,
                             color: Colors.white,
                           ),
                         ),
@@ -1358,29 +1568,29 @@ class _EditorialGridCardState extends State<_EditorialGridCard> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         category.toUpperCase(),
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 8.5,
+                          fontSize: 8,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.brandRed,
-                          letterSpacing: 2,
+                          letterSpacing: 1.8,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       Text(
                         title.isEmpty ? 'PROJECT' : title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
-                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
@@ -1396,7 +1606,7 @@ class _EditorialGridCardState extends State<_EditorialGridCard> {
 }
 
 // ============================================================================
-// FULL INTERACTIVE MEDIA & VIDEO CONTROLLER
+// MEDIA PREVIEW COMPONENT
 // ============================================================================
 class _PortfolioMedia extends StatefulWidget {
   final String url;
@@ -1404,7 +1614,6 @@ class _PortfolioMedia extends StatefulWidget {
   final bool autoplay;
   final bool muted;
   final bool loop;
-  final bool showControls;
 
   const _PortfolioMedia({
     required this.url,
@@ -1412,7 +1621,6 @@ class _PortfolioMedia extends StatefulWidget {
     this.autoplay = false,
     this.muted = true,
     this.loop = true,
-    this.showControls = false,
   });
 
   @override
@@ -1424,13 +1632,10 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
   bool _isVideo = false;
   bool _initialized = false;
   bool _failed = false;
-  bool _isMuted = true;
-  bool _isHovering = false;
 
   @override
   void initState() {
     super.initState();
-    _isMuted = widget.muted;
     _initialize();
   }
 
@@ -1442,7 +1647,8 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
     if (!_isVideo) return;
 
     try {
-      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      final controller =
+      VideoPlayerController.networkUrl(Uri.parse(url));
       _controller = controller;
 
       await controller.initialize();
@@ -1452,11 +1658,7 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
       }
 
       await controller.setLooping(widget.loop);
-      await controller.setVolume(_isMuted ? 0 : 1);
-
-      controller.addListener(() {
-        if (mounted) setState(() {});
-      });
+      await controller.setVolume(widget.muted ? 0 : 1);
 
       if (!mounted) return;
       setState(() => _initialized = true);
@@ -1471,7 +1673,8 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
   }
 
   bool _isVideoUrl(String url) {
-    final clean = url.split('?').first.split('#').first.toLowerCase();
+    final clean =
+    url.split('?').first.split('#').first.toLowerCase();
     return clean.endsWith('.mp4') ||
         clean.endsWith('.webm') ||
         clean.endsWith('.mov') ||
@@ -1481,188 +1684,25 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
         clean.contains('video');
   }
 
-  void _togglePlayPause() {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    setState(() {
-      if (_controller!.value.isPlaying) {
-        _controller!.pause();
-      } else {
-        _controller!.play();
-      }
-    });
-  }
-
-  void _toggleMute() {
-    if (_controller == null) return;
-    setState(() {
-      _isMuted = !_isMuted;
-      _controller!.setVolume(_isMuted ? 0.0 : 1.0);
-    });
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
-  }
-
   Widget _buildVideo(BuildContext context) {
     if (_failed) {
       return _placeholder(Icons.video_library_outlined);
     }
 
-    if (!_initialized || _controller == null || !_controller!.value.isInitialized) {
+    if (!_initialized ||
+        _controller == null ||
+        !_controller!.value.isInitialized) {
       return const _MediaShimmer();
     }
 
     final controller = _controller!;
-    final isPlaying = controller.value.isPlaying;
-    final position = controller.value.position;
-    final duration = controller.value.duration;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
-      child: GestureDetector(
-        onTap: _togglePlayPause,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            FittedBox(
-              fit: widget.fit,
-              clipBehavior: Clip.hardEdge,
-              child: SizedBox(
-                width: controller.value.size.width,
-                height: controller.value.size.height,
-                child: VideoPlayer(controller),
-              ),
-            ),
-
-            // Subtle Vignette overlay when hovering
-            AnimatedOpacity(
-              opacity: (widget.showControls && _isHovering) || !isPlaying ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.2),
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.75),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Large Center Play/Pause Indicator on Pause
-            if (!isPlaying)
-              Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.brandRed.withOpacity(0.85),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.brandRed.withOpacity(0.4),
-                            blurRadius: 20,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 36),
-                    ),
-                  ),
-                ),
-              ),
-
-            // COMPREHENSIVE INTERACTIVE CONTROLS BAR
-            if (widget.showControls)
-              Positioned(
-                bottom: 16,
-                left: 16,
-                right: 16,
-                child: AnimatedOpacity(
-                  opacity: _isHovering || !isPlaying ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.65),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: _togglePlayPause,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white70,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: SizedBox(
-                                  height: 6,
-                                  child: VideoProgressIndicator(
-                                    controller,
-                                    allowScrubbing: true,
-                                    colors: VideoProgressColors(
-                                      playedColor: AppTheme.brandRed,
-                                      bufferedColor: Colors.white24,
-                                      backgroundColor: Colors.white10,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            IconButton(
-                              icon: Icon(
-                                _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                                color: Colors.white70,
-                                size: 20,
-                              ),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: _toggleMute,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+    return FittedBox(
+      fit: widget.fit,
+      clipBehavior: Clip.hardEdge,
+      child: SizedBox(
+        width: controller.value.size.width,
+        height: controller.value.size.height,
+        child: VideoPlayer(controller),
       ),
     );
   }
@@ -1671,12 +1711,13 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
     return Image.network(
       url,
       fit: widget.fit,
-      cacheWidth: 1400,
+      cacheWidth: 900,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return const _MediaShimmer();
       },
-      errorBuilder: (context, error, stackTrace) => _placeholder(Icons.broken_image_outlined),
+      errorBuilder: (context, error, stackTrace) =>
+          _placeholder(Icons.broken_image_outlined),
     );
   }
 
@@ -1684,7 +1725,7 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
     return Container(
       color: AppTheme.darkCard,
       child: Center(
-        child: Icon(icon, size: 36, color: Colors.white24),
+        child: Icon(icon, size: 32, color: Colors.white24),
       ),
     );
   }
@@ -1701,6 +1742,329 @@ class _PortfolioMediaState extends State<_PortfolioMedia> {
   void dispose() {
     _controller?.dispose();
     super.dispose();
+  }
+}
+
+// ============================================================================
+// FULL INTERACTIVE VIDEO PLAYER WITH ±10S, TIME BAR & CONTROLS
+// ============================================================================
+class _InteractiveVideoPlayerView extends StatefulWidget {
+  final String videoUrl;
+
+  const _InteractiveVideoPlayerView({required this.videoUrl});
+
+  @override
+  State<_InteractiveVideoPlayerView> createState() =>
+      _InteractiveVideoPlayerViewState();
+}
+
+class _InteractiveVideoPlayerViewState
+    extends State<_InteractiveVideoPlayerView> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+  bool _showControls = true;
+  bool _isMuted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+          _controller.play();
+          _controller.setLooping(true);
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _seekRelative(int seconds) {
+    if (!_isInitialized) return;
+    final currentPos = _controller.value.position;
+    final targetPos = currentPos + Duration(seconds: seconds);
+    final duration = _controller.value.duration;
+
+    if (targetPos < Duration.zero) {
+      _controller.seekTo(Duration.zero);
+    } else if (targetPos > duration) {
+      _controller.seekTo(duration);
+    } else {
+      _controller.seekTo(targetPos);
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return Container(
+        color: AppTheme.darkCard,
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: AppTheme.brandRed,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _showControls = true),
+      onExit: (_) => setState(() => _showControls = false),
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _showControls = !_showControls);
+        },
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Video Viewport
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _controller.value.size.width,
+                  height: _controller.value.size.height,
+                  child: VideoPlayer(_controller),
+                ),
+              ),
+            ),
+
+            // Subtle Dimming Overlay for Controls
+            AnimatedOpacity(
+              opacity: _showControls ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.35),
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.85),
+                    ],
+                    stops: const [0.0, 0.4, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // Center Play/Pause & ±10s Controls
+            AnimatedOpacity(
+              opacity: _showControls ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Rewind 10s
+                  _VideoControlButton(
+                    icon: Icons.replay_10_rounded,
+                    size: 44,
+                    iconSize: 24,
+                    tooltip: 'Rewind 10s',
+                    onTap: () => _seekRelative(-10),
+                  ),
+                  const SizedBox(width: 24),
+
+                  // Play / Pause Main Button
+                  ValueListenableBuilder(
+                    valueListenable: _controller,
+                    builder: (context, VideoPlayerValue value, child) {
+                      final isPlaying = value.isPlaying;
+                      return _VideoControlButton(
+                        icon: isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        size: 60,
+                        iconSize: 34,
+                        isPrimary: true,
+                        tooltip: isPlaying ? 'Pause' : 'Play',
+                        onTap: () {
+                          setState(() {
+                            isPlaying
+                                ? _controller.pause()
+                                : _controller.play();
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 24),
+
+                  // Forward 10s
+                  _VideoControlButton(
+                    icon: Icons.forward_10_rounded,
+                    size: 44,
+                    iconSize: 24,
+                    tooltip: 'Forward 10s',
+                    onTap: () => _seekRelative(10),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom Progress Bar & Timestamps
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedOpacity(
+                opacity: _showControls ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: ValueListenableBuilder(
+                    valueListenable: _controller,
+                    builder: (context, VideoPlayerValue value, child) {
+                      final position = value.position;
+                      final duration = value.duration;
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Scrubber Bar
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: SizedBox(
+                              height: 6,
+                              child: VideoProgressIndicator(
+                                _controller,
+                                allowScrubbing: true,
+                                padding: EdgeInsets.zero,
+                                colors: VideoProgressColors(
+                                  playedColor: AppTheme.brandRed,
+                                  bufferedColor: Colors.white24,
+                                  backgroundColor: Colors.white12,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Control Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white70,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      _isMuted
+                                          ? Icons.volume_off_rounded
+                                          : Icons.volume_up_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isMuted = !_isMuted;
+                                        _controller.setVolume(
+                                            _isMuted ? 0.0 : 1.0);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoControlButton extends StatelessWidget {
+  final IconData icon;
+  final double size;
+  final double iconSize;
+  final bool isPrimary;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _VideoControlButton({
+    required this.icon,
+    required this.size,
+    required this.iconSize,
+    this.isPrimary = false,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(size),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isPrimary
+                  ? AppTheme.brandRed
+                  : Colors.black.withOpacity(0.65),
+              border: Border.all(
+                color: isPrimary
+                    ? Colors.transparent
+                    : Colors.white.withOpacity(0.15),
+                width: 1.2,
+              ),
+              boxShadow: isPrimary
+                  ? [
+                BoxShadow(
+                  color: AppTheme.brandRed.withOpacity(0.4),
+                  blurRadius: 16,
+                ),
+              ]
+                  : [],
+            ),
+            child: Icon(
+              icon,
+              size: iconSize,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1738,7 +2102,8 @@ String _getMediaUrl(Map<String, dynamic> item) {
 }
 
 bool _isVideoFileUrl(String url) {
-  final lower = url.split('?').first.split('#').first.toLowerCase();
+  final lower =
+  url.split('?').first.split('#').first.toLowerCase();
   return lower.endsWith('.mp4') ||
       lower.endsWith('.webm') ||
       lower.endsWith('.mov') ||
@@ -1751,151 +2116,60 @@ bool _isVideoFileUrl(String url) {
 // ============================================================================
 // SKELETON CARD & SHIMMER
 // ============================================================================
-class _PortfolioSkeletonCard extends StatefulWidget {
+class _PortfolioSkeletonCard extends StatelessWidget {
   const _PortfolioSkeletonCard();
 
   @override
-  State<_PortfolioSkeletonCard> createState() => _PortfolioSkeletonCardState();
-}
-
-class _PortfolioSkeletonCardState extends State<_PortfolioSkeletonCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1300),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final value = _controller.value;
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: ShaderMask(
-            shaderCallback: (bounds) {
-              final position = -1.0 + value * 3.0;
-              return LinearGradient(
-                begin: Alignment(position - 1, 0),
-                end: Alignment(position + 1, 0),
-                colors: const [
-                  Colors.transparent,
-                  Colors.white10,
-                  Colors.transparent,
-                ],
-              ).createShader(bounds);
-            },
-            blendMode: BlendMode.srcATop,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppTheme.darkCard,
-                border: Border.all(color: AppTheme.greyBorder),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Container(color: Colors.white.withOpacity(0.03)),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.darkCard,
+        border: Border.all(color: AppTheme.greyBorder),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Container(color: Colors.white.withOpacity(0.02)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 8,
+                  width: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 8,
-                          width: 60,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          height: 16,
-                          width: 150,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 14,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
 
-class _MediaShimmer extends StatefulWidget {
+class _MediaShimmer extends StatelessWidget {
   const _MediaShimmer();
 
   @override
-  State<_MediaShimmer> createState() => _MediaShimmerState();
-}
-
-class _MediaShimmerState extends State<_MediaShimmer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        final position = -1.0 + (_animationController.value * 2.0);
-        return Container(
-          color: AppTheme.darkCard,
-          child: ShaderMask(
-            shaderCallback: (bounds) {
-              return LinearGradient(
-                begin: Alignment(position - 1, 0),
-                end: Alignment(position + 1, 0),
-                colors: const [
-                  Colors.transparent,
-                  Colors.white10,
-                  Colors.transparent,
-                ],
-              ).createShader(bounds);
-            },
-            blendMode: BlendMode.srcATop,
-            child: Container(color: Colors.white.withOpacity(0.03)),
-          ),
-        );
-      },
+    return Container(
+      color: AppTheme.darkCard,
     );
   }
 }
@@ -1911,19 +2185,19 @@ class _ClientLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.02),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.white.withOpacity(0.04)),
       ),
       child: Text(
         name,
         style: GoogleFonts.plusJakartaSans(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
           color: Colors.white38,
-          letterSpacing: 2,
+          letterSpacing: 1.8,
         ),
       ),
     );
@@ -1943,47 +2217,38 @@ class _PortfolioFinalCta extends StatefulWidget {
 }
 
 class _PortfolioFinalCtaState extends State<_PortfolioFinalCta> {
-  bool hovering = false;
+  bool _hovering = false;
 
   @override
   Widget build(BuildContext context) {
     final mobile = MediaQuery.of(context).size.width < 768;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: mobile ? 20 : 64),
+      padding: EdgeInsets.symmetric(horizontal: mobile ? 18 : 64),
       child: MouseRegion(
         onEnter: (_) {
-          setState(() => hovering = true);
+          setState(() => _hovering = true);
           widget.onHoverItem(true, 'START');
         },
         onExit: (_) {
-          setState(() => hovering = false);
+          setState(() => _hovering = false);
           widget.onHoverItem(false, '');
         },
         child: GestureDetector(
           onTap: () {},
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 350),
+            duration: const Duration(milliseconds: 220),
             padding: EdgeInsets.symmetric(
-              horizontal: mobile ? 24 : 64,
-              vertical: mobile ? 48 : 80,
+              horizontal: mobile ? 22 : 56,
+              vertical: mobile ? 42 : 68,
             ),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(32),
-              color: hovering ? AppTheme.brandRed : AppTheme.darkCard,
+              borderRadius: BorderRadius.circular(28),
+              color: _hovering ? AppTheme.brandRed : AppTheme.darkCard,
               border: Border.all(
-                color: hovering ? AppTheme.brandRed : AppTheme.greyBorder,
+                color: _hovering ? AppTheme.brandRed : AppTheme.greyBorder,
                 width: 1.5,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: hovering
-                      ? AppTheme.brandRed.withOpacity(0.35)
-                      : Colors.black.withOpacity(0.4),
-                  blurRadius: hovering ? 40 : 20,
-                  offset: const Offset(0, 12),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1993,35 +2258,36 @@ class _PortfolioFinalCtaState extends State<_PortfolioFinalCta> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: hovering ? Colors.white70 : AppTheme.brandRed,
-                    letterSpacing: 3,
+                    color: _hovering ? Colors.white70 : AppTheme.brandRed,
+                    letterSpacing: 2.5,
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 Text(
                   'LET’S MAKE\nIT REAL.',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: mobile ? 44 : 76,
-                    height: 0.92,
+                    fontSize: mobile ? 40 : 68,
+                    height: 0.94,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
-                    letterSpacing: -3,
+                    letterSpacing: -2.5,
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
                 Row(
                   children: [
                     Text(
                       'START A PROJECT',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
-                        letterSpacing: 2,
+                        letterSpacing: 1.8,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    const Icon(Icons.arrow_forward_rounded,
+                        color: Colors.white, size: 18),
                   ],
                 ),
               ],
@@ -2034,42 +2300,60 @@ class _PortfolioFinalCtaState extends State<_PortfolioFinalCta> {
 }
 
 // ============================================================================
-// DETAILS PAGE (WITH FULL INTERACTIVE VIDEO PLAYER)
+// DETAILS PAGE (WITH FULL INTERACTIVE VIDEO PLAYER & DEEP PARALLAX)
 // ============================================================================
-class AppDetailsPage extends StatelessWidget {
+class AppDetailsPage extends StatefulWidget {
   final Map<String, dynamic> item;
 
   const AppDetailsPage({super.key, required this.item});
 
-  String _value(String key) => item[key]?.toString() ?? '';
+  @override
+  State<AppDetailsPage> createState() => _AppDetailsPageState();
+}
+
+class _AppDetailsPageState extends State<AppDetailsPage> {
+  final ScrollController _pageScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
+  }
+
+  String _value(String key) => widget.item[key]?.toString() ?? '';
 
   @override
   Widget build(BuildContext context) {
-    final title = _value('title').isNotEmpty ? _value('title') : _value('name');
+    final title =
+    _value('title').isNotEmpty ? _value('title') : _value('name');
     final description = _value('description');
     final category = _value('category').toUpperCase();
-    final media = _getMediaUrl(item);
+    final media = _getMediaUrl(widget.item);
     final isVideo = _isVideoFileUrl(media);
     final width = MediaQuery.of(context).size.width;
     final isMobile = width < 768;
 
-    final mediaWidth = isMobile ? width - 40 : width * 0.65;
-    final mediaHeight = isMobile ? mediaWidth * 0.75 : mediaWidth * 0.62;
+    final mediaWidth = isMobile ? width - 36 : width * 0.68;
+    final mediaHeight =
+    isMobile ? mediaWidth * 0.75 : mediaWidth * 0.58;
 
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
       body: CustomScrollView(
+        controller: _pageScrollController,
+        physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            backgroundColor: AppTheme.darkBackground.withOpacity(0.9),
+            backgroundColor: AppTheme.darkBackground,
             elevation: 0,
             pinned: true,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              icon: const Icon(Icons.arrow_back_rounded,
+                  color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'THEVAH // PROJECT ARCHIVE',
+              'THEVAH // ARCHIVE',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -2081,58 +2365,60 @@ class AppDetailsPage extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                isMobile ? 20 : 64,
-                40,
-                isMobile ? 20 : 64,
-                100,
+                isMobile ? 18 : 64,
+                32,
+                isMobile ? 18 : 64,
+                80,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.brandRed.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.brandRed.withOpacity(0.35)),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: AppTheme.brandRed.withOpacity(0.35)),
                     ),
                     child: Text(
                       category.isEmpty ? 'CASE STUDY' : category,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
+                        fontSize: 9.5,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.brandRed,
-                        letterSpacing: 2.5,
+                        letterSpacing: 2.0,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   Text(
                     title.isEmpty ? 'PROJECT' : title,
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: isMobile ? 42 : 72,
+                      fontSize: isMobile ? 38 : 64,
                       height: 0.95,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
-                      letterSpacing: -2.5,
+                      letterSpacing: -2.0,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   if (description.isNotEmpty)
                     ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 750),
+                      constraints: const BoxConstraints(maxWidth: 720),
                       child: Text(
                         description,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
-                          height: 1.8,
+                          fontSize: 15,
+                          height: 1.75,
                           color: Colors.white60,
                         ),
                       ),
                     ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
 
-                  // INTERACTIVE SHOWCASE (WITH CONTROLS)
+                  // SHOWCASE: VIDEO WITH CONTROLS OR PARALLAX IMAGE
                   if (media.isNotEmpty)
                     Center(
                       child: Container(
@@ -2140,31 +2426,30 @@ class AppDetailsPage extends StatelessWidget {
                         height: mediaHeight,
                         clipBehavior: Clip.hardEdge,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.65),
-                              blurRadius: 36,
-                              offset: const Offset(0, 14),
-                            ),
-                          ],
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.1)),
                         ),
-                        child: _PortfolioMedia(
-                          url: media,
-                          fit: BoxFit.cover,
-                          autoplay: isVideo,
-                          muted: false,
-                          loop: true,
-                          showControls: isVideo, // Full interactive controls on Details page
+                        child: isVideo
+                            ? _InteractiveVideoPlayerView(videoUrl: media)
+                            : _EffectiveParallaxBox(
+                          parallaxIntensity: 0.35,
+                          child: Image.network(
+                            media,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
 
-                  const SizedBox(height: 56),
+                  const SizedBox(height: 48),
 
-                  _DetailsInfoRow(label: 'CATEGORY', value: category.isEmpty ? '—' : category),
-                  _DetailsInfoRow(label: 'PROJECT', value: title.isEmpty ? '—' : title),
+                  _DetailsInfoRow(
+                      label: 'CATEGORY',
+                      value: category.isEmpty ? '—' : category),
+                  _DetailsInfoRow(
+                      label: 'PROJECT',
+                      value: title.isEmpty ? '—' : title),
                 ],
               ),
             ),
@@ -2184,7 +2469,7 @@ class _DetailsInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 18),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: Colors.white.withOpacity(0.08)),
@@ -2193,11 +2478,11 @@ class _DetailsInfoRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 140,
+            width: 130,
             child: Text(
               label,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 10.5,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: Colors.white38,
                 letterSpacing: 2,
@@ -2208,10 +2493,140 @@ class _DetailsInfoRow extends StatelessWidget {
             child: Text(
               value,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// LOADING & ERROR & EMPTY
+// ============================================================================
+class _PortfolioLoading extends StatelessWidget {
+  const _PortfolioLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 44,
+            height: 44,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppTheme.brandRed,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'LOADING THEVAH ARCHIVE...',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2.5,
+              color: Colors.white60,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PortfolioError extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+
+  const _PortfolioError({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 440),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: AppTheme.darkCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                size: 36, color: AppTheme.brandRed),
+            const SizedBox(height: 16),
+            Text(
+              'COULD NOT LOAD PORTFOLIO',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12, height: 1.4, color: Colors.white54),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.brandRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 28, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'TRY AGAIN',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PortfolioEmpty extends StatelessWidget {
+  const _PortfolioEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.inventory_2_outlined,
+              size: 42, color: Colors.white.withOpacity(0.2)),
+          const SizedBox(height: 14),
+          Text(
+            'NO PROJECTS AVAILABLE',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white54,
+              letterSpacing: 2,
             ),
           ),
         ],

@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:tevahweb/portfolio_availability.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'dropbox.dart';
@@ -16,62 +18,143 @@ import 'portfolio_screen.dart';
 // NAVIGATION ROUTE ENUM
 // ============================================================================
 
-enum NavRoute { home, about, portfolio, dropbox, solutions, capabilities, contact }
+enum NavRoute {
+  home,
+  about,
+  portfolio,
+  dropbox,
+  solutions,
+  capabilities,
+  contact,
+}
 
 // ============================================================================
-// CENTRAL BRAND PALETTE (RED, BLACK & CHARCOAL GREY)
+// CENTRAL BRAND PALETTE
+// RED, BLACK & CHARCOAL GREY
 // ============================================================================
 
 abstract class AppTheme {
-  // Primary brand accent color
   static const Color brandRed = Color(0xFFa02928);
 
-  // Dark background and surface tokens
   static const Color darkBackground = Color(0xFF0A0A0B);
+
   static const Color darkCard = Color(0xFF141416);
+
   static const Color darkSurface = Color(0xFF18181D);
+
   static const Color greyBorder = Colors.white10;
+
   static const Color targetCream = Color(0xFFE0E0E0);
 }
 
-bool _portfolioAvailable = false;
-
 // ============================================================================
-// TEVAH NAVBAR (RESPONSIVE TOP NAVIGATION)
+// TEVAH NAVBAR
+// RESPONSIVE TOP NAVIGATION
 // ============================================================================
 
-class TevahNavbar extends StatelessWidget {
+class TevahNavbar extends StatefulWidget {
   final NavRoute currentRoute;
   final ValueChanged<bool>? onHoverItem;
 
-  const TevahNavbar({
-    super.key,
-    required this.currentRoute,
-    this.onHoverItem,
-  });
+  const TevahNavbar({super.key, required this.currentRoute, this.onHoverItem});
 
-  // Smooth route navigation handler
+  @override
+  State<TevahNavbar> createState() => _TevahNavbarState();
+}
+
+class _TevahNavbarState extends State<TevahNavbar> {
+  // Portfolio starts hidden.
+  //
+  // It will only become true after the API successfully confirms
+  // that the portfolio is available.
+  bool _portfolioAvailable = false;
+
+  bool _checkingPortfolio = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _checkPortfolioAvailability();
+  }
+
+  // ==========================================================================
+  // CHECK PORTFOLIO API
+  // ==========================================================================
+
+  Future<void> _checkPortfolioAvailability() async {
+    try {
+      print('Checking portfolio availability...');
+
+      final bool available =
+          await PortfolioAvailabilityService.isPortfolioAvailable();
+
+      if (!mounted) return;
+
+      setState(() {
+        _portfolioAvailable = available;
+        _checkingPortfolio = false;
+      });
+
+      print('Portfolio availability result: $_portfolioAvailable');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _portfolioAvailable = false;
+        _checkingPortfolio = false;
+      });
+
+      print('Portfolio availability check failed: $e');
+    }
+  }
+
+  // ==========================================================================
+  // NAVIGATION
+  // ==========================================================================
+
   void _navigate(BuildContext context, NavRoute target) {
-    if (target == currentRoute) return;
+    if (target == widget.currentRoute) {
+      return;
+    }
+
+    // ------------------------------------------------------------------------
+    // IMPORTANT:
+    // Never allow Portfolio navigation if API says unavailable.
+    // ------------------------------------------------------------------------
+
+    if (target == NavRoute.portfolio && !_portfolioAvailable) {
+      print('Portfolio navigation blocked because portfolio is unavailable.');
+      return;
+    }
+
+    // ------------------------------------------------------------------------
+    // DROPBOX
+    // ------------------------------------------------------------------------
 
     if (target == NavRoute.dropbox) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const DropboxPage()),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const DropboxPage()));
+
       return;
     }
 
     Widget page;
+
     switch (target) {
       case NavRoute.home:
         page = const MainAgencyScreen();
         break;
+
       case NavRoute.about:
         page = const AboutScreen();
         break;
+
       case NavRoute.portfolio:
         page = const PortfolioScreen();
         break;
+
       default:
         return;
     }
@@ -87,7 +170,10 @@ class TevahNavbar extends StatelessWidget {
     );
   }
 
-  // Mobile drawer bottom sheet launcher
+  // ==========================================================================
+  // MOBILE MENU
+  // ==========================================================================
+
   void _openMobileMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -103,7 +189,9 @@ class TevahNavbar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Mobile drawer header
+              // ----------------------------------------------------------------
+              // HEADER
+              // ----------------------------------------------------------------
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -118,53 +206,68 @@ class TevahNavbar extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
                   ),
                 ],
               ),
+
               const SizedBox(height: 24),
 
-              // Mobile drawer menu items
+              // ----------------------------------------------------------------
+              // HOME
+              // ----------------------------------------------------------------
               _MobileNavItem(
                 text: 'Home',
-                isActive: currentRoute == NavRoute.home,
+                isActive: widget.currentRoute == NavRoute.home,
                 onTap: () {
                   Navigator.of(context).pop();
+
                   _navigate(context, NavRoute.home);
                 },
               ),
+
+              // ----------------------------------------------------------------
+              // ABOUT
+              // ----------------------------------------------------------------
               _MobileNavItem(
                 text: 'About Us',
-                isActive: currentRoute == NavRoute.about,
+                isActive: widget.currentRoute == NavRoute.about,
                 onTap: () {
                   Navigator.of(context).pop();
+
                   _navigate(context, NavRoute.about);
                 },
               ),
-              _MobileNavItem(
-                text: 'Portfolio',
-                isActive: currentRoute == NavRoute.portfolio,
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _navigate(context, NavRoute.portfolio);
-                },
-              ),
-              // _MobileNavItem(
-              //   text: 'Dropbox',
-              //   isActive: currentRoute == NavRoute.dropbox,
-              //   onTap: () {
-              //     Navigator.of(context).pop();
-              //     _navigate(context, NavRoute.dropbox);
-              //   },
-              // ),
+
+              // ----------------------------------------------------------------
+              // PORTFOLIO
+              //
+              // ONLY SHOW WHEN API CONFIRMS AVAILABILITY
+              // ----------------------------------------------------------------
+              if (_portfolioAvailable)
+                _MobileNavItem(
+                  text: 'Portfolio',
+                  isActive: widget.currentRoute == NavRoute.portfolio,
+                  onTap: () {
+                    Navigator.of(context).pop();
+
+                    _navigate(context, NavRoute.portfolio);
+                  },
+                ),
+
               const SizedBox(height: 24),
 
-              // Mobile action button
+              // ----------------------------------------------------------------
+              // LET'S TALK
+              // ----------------------------------------------------------------
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
+
                     openLetsTalkModal(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -191,22 +294,35 @@ class TevahNavbar extends StatelessWidget {
     );
   }
 
+  // ==========================================================================
+  // BUILD NAVBAR
+  // ==========================================================================
+
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
+
     final bool isMobile = screenWidth < 900;
+
     final double horizontalPadding = isMobile ? 16.0 : 48.0;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20.0),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 20.0,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // LOGO BRAND MARK
+          // ==================================================================
+          // LOGO
+          // ==================================================================
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () => _navigate(context, NavRoute.home),
+              onTap: () {
+                _navigate(context, NavRoute.home);
+              },
               child: Row(
                 children: [
                   Container(
@@ -229,7 +345,9 @@ class TevahNavbar extends StatelessWidget {
                       ),
                     ),
                   ),
+
                   const SizedBox(width: 10),
+
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -258,13 +376,25 @@ class TevahNavbar extends StatelessWidget {
             ),
           ),
 
-          // DESKTOP NAVIGATION PILL vs MOBILE HAMBURGER
+          // ==================================================================
+          // MOBILE NAVIGATION
+          // ==================================================================
           if (isMobile) ...[
             IconButton(
-              icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-              onPressed: () => _openMobileMenu(context),
+              icon: const Icon(
+                Icons.menu_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+              onPressed: () {
+                _openMobileMenu(context);
+              },
             ),
-          ] else ...[
+          ]
+          // ==================================================================
+          // DESKTOP NAVIGATION
+          // ==================================================================
+          else ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
@@ -274,41 +404,67 @@ class TevahNavbar extends StatelessWidget {
               ),
               child: Row(
                 children: [
+                  // ------------------------------------------------------------
+                  // HOME
+                  // ------------------------------------------------------------
                   _NavItem(
                     text: 'Home',
-                    isActive: currentRoute == NavRoute.home,
-                    onTap: () => _navigate(context, NavRoute.home),
-                    onHover: (h) => onHoverItem?.call(h),
+                    isActive: widget.currentRoute == NavRoute.home,
+                    onTap: () {
+                      _navigate(context, NavRoute.home);
+                    },
+                    onHover: (h) {
+                      widget.onHoverItem?.call(h);
+                    },
                   ),
+
                   const SizedBox(width: 24),
+
+                  // ------------------------------------------------------------
+                  // ABOUT
+                  // ------------------------------------------------------------
                   _NavItem(
                     text: 'About Us',
-                    isActive: currentRoute == NavRoute.about,
-                    onTap: () => _navigate(context, NavRoute.about),
-                    onHover: (h) => onHoverItem?.call(h),
+                    isActive: widget.currentRoute == NavRoute.about,
+                    onTap: () {
+                      _navigate(context, NavRoute.about);
+                    },
+                    onHover: (h) {
+                      widget.onHoverItem?.call(h);
+                    },
                   ),
-                  const SizedBox(width: 24),
-                  _NavItem(
-                    text: 'Portfolio',
-                    isActive: currentRoute == NavRoute.portfolio,
-                    onTap: () => _navigate(context, NavRoute.portfolio),
-                    onHover: (h) => onHoverItem?.call(h),
-                  ),
-                  // const SizedBox(width: 24),
-                  // _NavItem(
-                  //   text: 'Dropbox',
-                  //   isActive: currentRoute == NavRoute.dropbox,
-                  //   onTap: () => _navigate(context, NavRoute.dropbox),
-                  //   onHover: (h) => onHoverItem?.call(h),
-                  // ),
+
+                  // ------------------------------------------------------------
+                  // PORTFOLIO
+                  //
+                  // ONLY CREATE THE NAV ITEM IF AVAILABLE
+                  // ------------------------------------------------------------
+                  if (_portfolioAvailable) ...[
+                    const SizedBox(width: 24),
+
+                    _NavItem(
+                      text: 'Portfolio',
+                      isActive: widget.currentRoute == NavRoute.portfolio,
+                      onTap: () {
+                        _navigate(context, NavRoute.portfolio);
+                      },
+                      onHover: (h) {
+                        widget.onHoverItem?.call(h);
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
 
-            // Magnetic header action button
+            // =================================================================
+            // LET'S TALK
+            // =================================================================
             _MagneticPillButton(
               label: "Let's Talk",
-              onHover: (h) => onHoverItem?.call(h),
+              onHover: (h) {
+                widget.onHoverItem?.call(h);
+              },
             ),
           ],
         ],
@@ -317,7 +473,10 @@ class TevahNavbar extends StatelessWidget {
   }
 }
 
-// Mobile navigation list item
+// ============================================================================
+// MOBILE NAVIGATION LIST ITEM
+// ============================================================================
+
 class _MobileNavItem extends StatelessWidget {
   final String text;
   final bool isActive;
@@ -348,7 +507,10 @@ class _MobileNavItem extends StatelessWidget {
   }
 }
 
-// Desktop navigation link item
+// ============================================================================
+// DESKTOP NAVIGATION LINK ITEM
+// ============================================================================
+
 class _NavItem extends StatefulWidget {
   final String text;
   final bool isActive;
@@ -372,13 +534,21 @@ class _NavItemState extends State<_NavItem> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       onEnter: (_) {
-        setState(() => _hovered = true);
+        setState(() {
+          _hovered = true;
+        });
+
         widget.onHover(true);
       },
       onExit: (_) {
-        setState(() => _hovered = false);
+        setState(() {
+          _hovered = false;
+        });
+
         widget.onHover(false);
       },
       child: GestureDetector(
@@ -388,7 +558,9 @@ class _NavItemState extends State<_NavItem> {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             fontWeight: widget.isActive ? FontWeight.bold : FontWeight.w600,
-            color: widget.isActive || _hovered ? AppTheme.brandRed : Colors.white,
+            color: widget.isActive || _hovered
+                ? AppTheme.brandRed
+                : Colors.white,
           ),
         ),
       ),
@@ -396,7 +568,10 @@ class _NavItemState extends State<_NavItem> {
   }
 }
 
-// Header magnetic CTA pill button
+// ============================================================================
+// HEADER MAGNETIC CTA PILL BUTTON
+// ============================================================================
+
 class _MagneticPillButton extends StatefulWidget {
   final String label;
   final ValueChanged<bool> onHover;
@@ -415,15 +590,23 @@ class _MagneticPillButtonState extends State<_MagneticPillButton> {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) {
-        setState(() => _hovered = true);
+        setState(() {
+          _hovered = true;
+        });
+
         widget.onHover(true);
       },
       onExit: (_) {
-        setState(() => _hovered = false);
+        setState(() {
+          _hovered = false;
+        });
+
         widget.onHover(false);
       },
       child: GestureDetector(
-        onTap: () => openLetsTalkModal(context),
+        onTap: () {
+          openLetsTalkModal(context);
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -445,6 +628,10 @@ class _MagneticPillButtonState extends State<_MagneticPillButton> {
   }
 }
 
+// ============================================================================
+// HERO GRID BACKGROUND PAINTER
+// ============================================================================
+
 class HeroGridBackgroundPainter extends CustomPainter {
   final Offset cursorPos;
   final double animationProgress;
@@ -461,9 +648,11 @@ class HeroGridBackgroundPainter extends CustomPainter {
       ..strokeWidth = 1.0;
 
     const double step = 60.0;
+
     for (double x = 0; x < size.width; x += step) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
+
     for (double y = 0; y < size.height; y += step) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
@@ -471,22 +660,26 @@ class HeroGridBackgroundPainter extends CustomPainter {
     if (cursorPos != Offset.zero) {
       final Paint mouseGlowPaint = Paint()
         ..shader = RadialGradient(
-          colors: [
-            AppTheme.brandRed.withOpacity(0.12),
-            Colors.transparent,
-          ],
+          colors: [AppTheme.brandRed.withOpacity(0.12), Colors.transparent],
         ).createShader(Rect.fromCircle(center: cursorPos, radius: 350));
+
       canvas.drawCircle(cursorPos, 350, mouseGlowPaint);
     }
 
     final math.Random rand = math.Random(42);
+
     final Paint particlePaint = Paint()..color = Colors.white.withOpacity(0.18);
 
     for (int i = 0; i < 40; i++) {
       final double x = rand.nextDouble() * size.width;
+
       final double initialY = rand.nextDouble() * size.height;
+
       final double speed = 20 + rand.nextDouble() * 40;
-      final double y = (initialY - animationProgress * speed * 20) % size.height;
+
+      final double y =
+          (initialY - animationProgress * speed * 20) % size.height;
+
       final double radius = 1.0 + rand.nextDouble() * 2.0;
 
       canvas.drawCircle(Offset(x, y), radius, particlePaint);
@@ -510,10 +703,14 @@ class AgencyFooter extends StatefulWidget {
 
 class _AgencyFooterState extends State<AgencyFooter> {
   Offset _cursorPos = Offset.zero;
+
   bool _isCopied = false;
 
   void _scrollToTop(BuildContext context) {
-    final ScrollController? primaryController = PrimaryScrollController.of(context);
+    final ScrollController? primaryController = PrimaryScrollController.of(
+      context,
+    );
+
     if (primaryController != null && primaryController.hasClients) {
       primaryController.animateTo(
         0,
@@ -525,20 +722,34 @@ class _AgencyFooterState extends State<AgencyFooter> {
 
   void _copyEmail() {
     Clipboard.setData(const ClipboardData(text: 'support@tevah.technology'));
-    setState(() => _isCopied = true);
+
+    setState(() {
+      _isCopied = true;
+    });
+
     Timer(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _isCopied = false);
+      if (mounted) {
+        setState(() {
+          _isCopied = false;
+        });
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
+
     final bool isMobile = screenWidth < 768;
+
     final double padding = isMobile ? 20.0 : 48.0;
 
     return MouseRegion(
-      onHover: (e) => setState(() => _cursorPos = e.position),
+      onHover: (e) {
+        setState(() {
+          _cursorPos = e.position;
+        });
+      },
       child: Container(
         color: const Color(0xFF060607),
         child: Stack(
@@ -548,10 +759,16 @@ class _AgencyFooterState extends State<AgencyFooter> {
                 painter: FooterAtmospherePainter(cursorPos: _cursorPos),
               ),
             ),
+
             Column(
               children: [
                 Padding(
-                  padding: EdgeInsets.fromLTRB(padding, isMobile ? 40 : 80, padding, 40),
+                  padding: EdgeInsets.fromLTRB(
+                    padding,
+                    isMobile ? 40 : 80,
+                    padding,
+                    40,
+                  ),
                   child: Column(
                     children: [
                       if (isMobile) ...[
@@ -559,24 +776,20 @@ class _AgencyFooterState extends State<AgencyFooter> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _BrandSummary(),
+
                             const SizedBox(height: 28),
+
                             _MajorEmailSection(
                               isCopied: _isCopied,
                               onCopy: _copyEmail,
                             ),
+
                             const SizedBox(height: 40),
+
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // _FooterInteractiveNavColumn(
-                                //   title: 'EXPLORE',
-                                //   links: const [
-                                //     {'label': 'About', 'route': NavRoute.about},
-                                //     {'label': 'Portfolio', 'route': NavRoute.portfolio},
-                                //     {'label': 'Dropbox', 'route': NavRoute.dropbox},
-                                //   ],
-                                // ),
                                 _FooterInteractiveNavColumn(
                                   title: 'SERVICES',
                                   links: const [
@@ -591,7 +804,9 @@ class _AgencyFooterState extends State<AgencyFooter> {
                                 ),
                               ],
                             ),
+
                             const SizedBox(height: 36),
+
                             _SocialConnectColumn(),
                           ],
                         ),
@@ -606,7 +821,9 @@ class _AgencyFooterState extends State<AgencyFooter> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _BrandSummary(),
+
                                   const SizedBox(height: 36),
+
                                   _MajorEmailSection(
                                     isCopied: _isCopied,
                                     onCopy: _copyEmail,
@@ -614,16 +831,11 @@ class _AgencyFooterState extends State<AgencyFooter> {
                                 ],
                               ),
                             ),
+
                             const SizedBox(width: 40),
-                            // _FooterInteractiveNavColumn(
-                            //   title: 'EXPLORE',
-                            //   links: const [
-                            //     {'label': 'About', 'route': NavRoute.about},
-                            //     {'label': 'Portfolio', 'route': NavRoute.portfolio},
-                            //     {'label': 'Dropbox', 'route': NavRoute.dropbox},
-                            //   ],
-                            // ),
+
                             const SizedBox(width: 60),
+
                             _FooterInteractiveNavColumn(
                               title: 'SERVICES',
                               links: const [
@@ -636,14 +848,20 @@ class _AgencyFooterState extends State<AgencyFooter> {
                                 {'label': 'WordPress'},
                               ],
                             ),
+
                             const SizedBox(width: 60),
+
                             _SocialConnectColumn(),
                           ],
                         ),
                       ],
+
                       SizedBox(height: isMobile ? 40 : 80),
+
                       const Divider(color: AppTheme.greyBorder),
+
                       const SizedBox(height: 24),
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -656,7 +874,12 @@ class _AgencyFooterState extends State<AgencyFooter> {
                               ),
                             ),
                           ),
-                          _BackToTopButton(onTap: () => _scrollToTop(context)),
+
+                          _BackToTopButton(
+                            onTap: () {
+                              _scrollToTop(context);
+                            },
+                          ),
                         ],
                       ),
                     ],
@@ -672,7 +895,7 @@ class _AgencyFooterState extends State<AgencyFooter> {
 }
 
 // ============================================================================
-// FOOTER SUB-COMPONENTS
+// FOOTER - BRAND SUMMARY
 // ============================================================================
 
 class _BrandSummary extends StatelessWidget {
@@ -690,9 +913,13 @@ class _BrandSummary extends StatelessWidget {
             color: Colors.white,
           ),
         ),
+
         const SizedBox(height: 8),
+
         Text(
-          'Technology.\nCreativity.\nIntelligence.',
+          'Technology.\n'
+          'Creativity.\n'
+          'Intelligence.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             height: 1.5,
@@ -703,6 +930,10 @@ class _BrandSummary extends StatelessWidget {
     );
   }
 }
+
+// ============================================================================
+// FOOTER - EMAIL
+// ============================================================================
 
 class _MajorEmailSection extends StatelessWidget {
   final bool isCopied;
@@ -724,7 +955,9 @@ class _MajorEmailSection extends StatelessWidget {
             letterSpacing: 2.0,
           ),
         ),
+
         const SizedBox(height: 8),
+
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -737,14 +970,21 @@ class _MajorEmailSection extends StatelessWidget {
                 letterSpacing: 0.5,
               ),
             ),
+
             const SizedBox(width: 12),
+
             InkWell(
               onTap: onCopy,
               borderRadius: BorderRadius.circular(20),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: isCopied ? AppTheme.brandRed : Colors.white.withOpacity(0.08),
+                  color: isCopied
+                      ? AppTheme.brandRed
+                      : Colors.white.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -754,7 +994,9 @@ class _MajorEmailSection extends StatelessWidget {
                       size: 12,
                       color: Colors.white,
                     ),
+
                     const SizedBox(width: 4),
+
                     Text(
                       isCopied ? 'COPIED' : ' ',
                       style: GoogleFonts.plusJakartaSans(
@@ -774,14 +1016,16 @@ class _MajorEmailSection extends StatelessWidget {
   }
 }
 
+// ============================================================================
+// FOOTER NAVIGATION COLUMN
+// ============================================================================
+
 class _FooterInteractiveNavColumn extends StatelessWidget {
   final String title;
+
   final List<Map<String, dynamic>> links;
 
-  const _FooterInteractiveNavColumn({
-    required this.title,
-    required this.links,
-  });
+  const _FooterInteractiveNavColumn({required this.title, required this.links});
 
   @override
   Widget build(BuildContext context) {
@@ -797,7 +1041,9 @@ class _FooterInteractiveNavColumn extends StatelessWidget {
             letterSpacing: 2.0,
           ),
         ),
+
         const SizedBox(height: 20),
+
         ...links.map((link) {
           return _FooterLinkRow(
             label: link['label'] as String,
@@ -808,6 +1054,10 @@ class _FooterInteractiveNavColumn extends StatelessWidget {
     );
   }
 }
+
+// ============================================================================
+// FOOTER LINK ROW
+// ============================================================================
 
 class _FooterLinkRow extends StatefulWidget {
   final String label;
@@ -823,26 +1073,33 @@ class _FooterLinkRowState extends State<_FooterLinkRow> {
   bool _isHovered = false;
 
   void _navigate(BuildContext context) {
-    if (widget.route == null) return;
+    if (widget.route == null) {
+      return;
+    }
 
     if (widget.route == NavRoute.dropbox) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const DropboxPage()),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const DropboxPage()));
+
       return;
     }
 
     Widget page;
+
     switch (widget.route!) {
       case NavRoute.home:
         page = const MainAgencyScreen();
         break;
+
       case NavRoute.about:
         page = const AboutScreen();
         break;
+
       case NavRoute.portfolio:
         page = const PortfolioScreen();
         break;
+
       default:
         return;
     }
@@ -861,11 +1118,23 @@ class _FooterLinkRowState extends State<_FooterLinkRow> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.route != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      cursor: widget.route != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      onEnter: (_) {
+        setState(() {
+          _isHovered = true;
+        });
+      },
+      onExit: (_) {
+        setState(() {
+          _isHovered = false;
+        });
+      },
       child: GestureDetector(
-        onTap: () => _navigate(context),
+        onTap: () {
+          _navigate(context);
+        },
         child: Padding(
           padding: const EdgeInsets.only(bottom: 14.0),
           child: AnimatedContainer(
@@ -882,7 +1151,9 @@ class _FooterLinkRowState extends State<_FooterLinkRow> {
                     color: _isHovered ? AppTheme.brandRed : Colors.white70,
                   ),
                 ),
+
                 const SizedBox(width: 6),
+
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 200),
                   opacity: _isHovered ? 1.0 : 0.0,
@@ -900,6 +1171,10 @@ class _FooterLinkRowState extends State<_FooterLinkRow> {
     );
   }
 }
+
+// ============================================================================
+// SOCIAL CONNECT
+// ============================================================================
 
 class _SocialConnectColumn extends StatelessWidget {
   static const List<Map<String, String>> socials = [
@@ -920,13 +1195,18 @@ class _SocialConnectColumn extends StatelessWidget {
             letterSpacing: 2.0,
           ),
         ),
+
         const SizedBox(height: 20),
+
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: socials.map((social) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
-              child: _MagneticSocialBadge(name: social['name']!, url: social['url']!),
+              child: _MagneticSocialBadge(
+                name: social['name']!,
+                url: social['url']!,
+              ),
             );
           }).toList(),
         ),
@@ -934,6 +1214,10 @@ class _SocialConnectColumn extends StatelessWidget {
     );
   }
 }
+
+// ============================================================================
+// SOCIAL BADGE
+// ============================================================================
 
 class _MagneticSocialBadge extends StatefulWidget {
   final String name;
@@ -948,8 +1232,9 @@ class _MagneticSocialBadge extends StatefulWidget {
 class _MagneticSocialBadgeState extends State<_MagneticSocialBadge> {
   bool _isHovered = false;
 
-  void _launchSocial() async {
+  Future<void> _launchSocial() async {
     final Uri uri = Uri.parse(widget.url);
+
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -959,17 +1244,29 @@ class _MagneticSocialBadgeState extends State<_MagneticSocialBadge> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        setState(() {
+          _isHovered = true;
+        });
+      },
+      onExit: (_) {
+        setState(() {
+          _isHovered = false;
+        });
+      },
       child: GestureDetector(
         onTap: _launchSocial,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: _isHovered ? AppTheme.brandRed : Colors.white.withOpacity(0.04),
+            color: _isHovered
+                ? AppTheme.brandRed
+                : Colors.white.withOpacity(0.04),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _isHovered ? AppTheme.brandRed : AppTheme.greyBorder),
+            border: Border.all(
+              color: _isHovered ? AppTheme.brandRed : AppTheme.greyBorder,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -983,7 +1280,9 @@ class _MagneticSocialBadgeState extends State<_MagneticSocialBadge> {
                   color: _isHovered ? Colors.white : AppTheme.brandRed,
                 ),
               ),
+
               const SizedBox(width: 8),
+
               Text(
                 widget.name,
                 style: GoogleFonts.plusJakartaSans(
@@ -999,6 +1298,10 @@ class _MagneticSocialBadgeState extends State<_MagneticSocialBadge> {
     );
   }
 }
+
+// ============================================================================
+// BACK TO TOP BUTTON
+// ============================================================================
 
 class _BackToTopButton extends StatefulWidget {
   final VoidCallback onTap;
@@ -1016,17 +1319,29 @@ class _BackToTopButtonState extends State<_BackToTopButton> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        setState(() {
+          _isHovered = true;
+        });
+      },
+      onExit: (_) {
+        setState(() {
+          _isHovered = false;
+        });
+      },
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: _isHovered ? AppTheme.brandRed : Colors.white.withOpacity(0.04),
+            color: _isHovered
+                ? AppTheme.brandRed
+                : Colors.white.withOpacity(0.04),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: _isHovered ? AppTheme.brandRed : AppTheme.greyBorder),
+            border: Border.all(
+              color: _isHovered ? AppTheme.brandRed : AppTheme.greyBorder,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1040,7 +1355,9 @@ class _BackToTopButtonState extends State<_BackToTopButton> {
                   letterSpacing: 1.5,
                 ),
               ),
+
               const SizedBox(width: 8),
+
               AnimatedRotation(
                 turns: _isHovered ? -0.125 : 0.0,
                 duration: const Duration(milliseconds: 250),
@@ -1059,7 +1376,8 @@ class _BackToTopButtonState extends State<_BackToTopButton> {
 }
 
 // ============================================================================
-// FLOATING WHATSAPP BUTTON (GLOBAL OVERLAY)
+// FLOATING WHATSAPP BUTTON
+// GLOBAL OVERLAY
 // ============================================================================
 
 class FloatingWhatsAppButton extends StatefulWidget {
@@ -1069,7 +1387,8 @@ class FloatingWhatsAppButton extends StatefulWidget {
   const FloatingWhatsAppButton({
     super.key,
     this.phoneNumber = '9188075549',
-    this.defaultMessage = 'Hello TEVAH team, I would like to discuss a project!',
+    this.defaultMessage =
+        'Hello TEVAH team, I would like to discuss a project!',
   });
 
   @override
@@ -1079,9 +1398,12 @@ class FloatingWhatsAppButton extends StatefulWidget {
 class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
   bool _isHovered = false;
 
-  void _openWhatsApp() async {
+  Future<void> _openWhatsApp() async {
     final String encodedMsg = Uri.encodeComponent(widget.defaultMessage);
-    final Uri url = Uri.parse('https://wa.me/${widget.phoneNumber}?text=$encodedMsg');
+
+    final Uri url = Uri.parse(
+      'https://wa.me/${widget.phoneNumber}?text=$encodedMsg',
+    );
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -1091,6 +1413,7 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
+
     final bool isMobile = screenWidth < 768;
 
     return Positioned(
@@ -1098,8 +1421,16 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
       right: isMobile ? 16 : 32,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
+        onEnter: (_) {
+          setState(() {
+            _isHovered = true;
+          });
+        },
+        onExit: (_) {
+          setState(() {
+            _isHovered = false;
+          });
+        },
         child: GestureDetector(
           onTap: _openWhatsApp,
           child: AnimatedContainer(
@@ -1115,7 +1446,9 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
               borderRadius: BorderRadius.circular(35),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF25D366).withOpacity(_isHovered ? 0.5 : 0.3),
+                  color: const Color(
+                    0xFF25D366,
+                  ).withOpacity(_isHovered ? 0.5 : 0.3),
                   blurRadius: _isHovered ? 20 : 12,
                   spreadRadius: _isHovered ? 2 : 0,
                   offset: const Offset(0, 6),
@@ -1130,6 +1463,7 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
                   color: Colors.white,
                   size: 28,
                 ),
+
                 if (_isHovered && !isMobile) ...[
                   const SizedBox(width: 10),
                   Text(
@@ -1163,15 +1497,16 @@ class FooterAtmospherePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint glowPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppTheme.brandRed.withOpacity(0.12),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width / 2, size.height * 0.35),
-        radius: size.width * 0.5,
-      ));
+      ..shader =
+          RadialGradient(
+            colors: [AppTheme.brandRed.withOpacity(0.12), Colors.transparent],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width / 2, size.height * 0.35),
+              radius: size.width * 0.5,
+            ),
+          );
+
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), glowPaint);
 
     final Paint gridPaint = Paint()
@@ -1179,9 +1514,11 @@ class FooterAtmospherePainter extends CustomPainter {
       ..strokeWidth = 1.0;
 
     const double step = 70.0;
+
     for (double x = 0; x < size.width; x += step) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
+
     for (double y = 0; y < size.height; y += step) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }

@@ -6,5 +6,5 @@ String Dropbox_APP_KEY = "dlrj13p1gea2j07";
 String Gmail_Service_ID = "service_mkaizxi";
 String Gmail_Template_ID = "template_nuxn5pb";
 String Gmail_Public_KEY = "Slrrkb9q88AKGYXQS";
-String Ngrok_KEY = "https://mitsuko-tigerish-evasively.ngrok-free.dev";
+String Ngrok_url = "https://mitsuko-tigerish-evasively.ngrok-free.dev";
 String Vercel_url = "https://thevah.vercel.app/";

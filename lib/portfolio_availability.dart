@@ -4,53 +4,106 @@ import 'package:http/http.dart' as http;
 import 'environmental.dart';
 
 class PortfolioAvailabilityService {
-  // Change this to your actual portfolio API.
-  static  String apiUrl =
-      '$Vercel_url/api/portfolio';
+  static String apiUrl =
+      'http://localhost:3000/api/portfolio';
 
   static Future<bool> isPortfolioAvailable() async {
+    print('');
+    print('========================================');
+    print('CHECKING PORTFOLIO AVAILABILITY');
+    print('========================================');
+
+    print('Ngrok_url:');
+    print(Ngrok_url);
+
+    print('');
+    print('Final Portfolio API URL:');
+    print(apiUrl);
+
     try {
+      final uri = Uri.parse(apiUrl);
+
+      print('');
+      print('Parsed URI:');
+      print(uri);
+
+      print('');
+      print('Sending GET request...');
+
       final response = await http
           .get(
-        Uri.parse(apiUrl),
+        uri,
         headers: {
           'Accept': 'application/json',
         },
       )
-          .timeout(const Duration(seconds: 8));
+          .timeout(
+        const Duration(seconds: 15),
+      );
 
-      // Only consider successful API responses as available.
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      print('');
+      print('========================================');
+      print('PORTFOLIO API RESPONSE');
+      print('========================================');
+
+      print('Status Code: ${response.statusCode}');
+      print('Headers: ${response.headers}');
+      print('Body:');
+      print(response.body);
+
+      print('========================================');
+
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
         try {
           final body = jsonDecode(response.body);
 
-          // If your API returns a list directly:
-          if (body is List) {
-            return true;
-          }
+          print('');
+          print('Decoded JSON:');
+          print(body);
 
-          // If your API returns:
-          // { "success": true, "data": [...] }
           if (body is Map<String, dynamic>) {
-            if (body['success'] == false) {
-              return false;
+            final success = body['success'];
+
+            print('');
+            print('API success value: $success');
+
+            if (success == true) {
+              print('Portfolio API is AVAILABLE');
+              return true;
             }
 
-            return true;
+            print('Portfolio API returned success=false');
+            return false;
           }
 
-          return true;
-        } catch (_) {
-          // API responded successfully but response wasn't JSON.
-          // You can change this to false if your API must return JSON.
-          return true;
+          print('Unexpected response format');
+          return false;
+        } catch (e) {
+          print('JSON decode error: $e');
+          return false;
         }
       }
 
-      // 401, 403, 404, 500, etc.
+      print(
+        'Portfolio API returned HTTP ${response.statusCode}',
+      );
+
       return false;
-    } catch (_) {
-      // Network error, timeout, server unavailable, etc.
+    } catch (error, stackTrace) {
+      print('');
+      print('========================================');
+      print('PORTFOLIO API ERROR');
+      print('========================================');
+
+      print('Error: $error');
+
+      print('');
+      print('StackTrace:');
+      print(stackTrace);
+
+      print('========================================');
+
       return false;
     }
   }
