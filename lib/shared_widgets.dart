@@ -87,7 +87,7 @@ class _TevahNavbarState extends State<TevahNavbar> {
       print('Checking portfolio availability...');
 
       final bool available =
-          await PortfolioAvailabilityService.isPortfolioAvailable();
+      await PortfolioAvailabilityService.isPortfolioAvailable();
 
       if (!mounted) return;
 
@@ -703,7 +703,6 @@ class AgencyFooter extends StatefulWidget {
 
 class _AgencyFooterState extends State<AgencyFooter> {
   Offset _cursorPos = Offset.zero;
-
   bool _isCopied = false;
 
   void _scrollToTop(BuildContext context) {
@@ -739,10 +738,8 @@ class _AgencyFooterState extends State<AgencyFooter> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-
     final bool isMobile = screenWidth < 768;
-
-    final double padding = isMobile ? 20.0 : 48.0;
+    final double padding = isMobile ? 20.0 : 56.0;
 
     return MouseRegion(
       onHover: (e) {
@@ -760,71 +757,79 @@ class _AgencyFooterState extends State<AgencyFooter> {
               ),
             ),
 
+            // Giant Background Watermark
+            Positioned(
+              bottom: isMobile ? 60 : 40,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  'TEVAH',
+                  style: TextStyle(
+                    fontFamily: 'Thunder',
+                    fontSize: isMobile ? screenWidth * 0.28 : 220,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 4.0,
+                    color: Colors.white.withOpacity(0.018),
+                    height: 0.8,
+                  ),
+                ),
+              ),
+            ),
+
             Column(
               children: [
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     padding,
-                    isMobile ? 40 : 80,
+                    isMobile ? 50 : 90,
                     padding,
-                    40,
+                    36,
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Status Live Indicator
+                      const _AvailabilityStatusBadge(),
+
+                      const SizedBox(height: 28),
+
                       if (isMobile) ...[
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _BrandSummary(),
 
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 32),
 
-                            _MajorEmailSection(
+                            _EmailInteractiveBentoCard(
                               isCopied: _isCopied,
                               onCopy: _copyEmail,
                             ),
 
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 36),
 
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _FooterInteractiveNavColumn(
-                                  title: 'SERVICES',
-                                  links: const [
-                                    {'label': 'Web Development'},
-                                    {'label': 'Mobile Apps'},
-                                    {'label': 'AI & Automation'},
-                                    {'label': 'UI/UX Design'},
-                                    {'label': 'Brand Identity'},
-                                    {'label': 'Video & Motion'},
-                                    {'label': 'WordPress'},
-                                  ],
-                                ),
-                              ],
-                            ),
+                            const _ServicesGridSection(),
 
                             const SizedBox(height: 36),
 
-                            _SocialConnectColumn(),
+                            _SocialConnectSection(),
                           ],
                         ),
                       ] else ...[
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              flex: 3,
+                              flex: 5,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _BrandSummary(),
 
-                                  const SizedBox(height: 36),
+                                  const SizedBox(height: 32),
 
-                                  _MajorEmailSection(
+                                  _EmailInteractiveBentoCard(
                                     isCopied: _isCopied,
                                     onCopy: _copyEmail,
                                   ),
@@ -832,31 +837,24 @@ class _AgencyFooterState extends State<AgencyFooter> {
                               ),
                             ),
 
-                            const SizedBox(width: 40),
+                            const Spacer(flex: 1),
 
-                            const SizedBox(width: 60),
-
-                            _FooterInteractiveNavColumn(
-                              title: 'SERVICES',
-                              links: const [
-                                {'label': 'Web Development'},
-                                {'label': 'Mobile Applications'},
-                                {'label': 'AI & Automation'},
-                                {'label': 'UI / UX Design'},
-                                {'label': 'Brand Identity'},
-                                {'label': 'Video & Motion'},
-                                {'label': 'WordPress'},
-                              ],
+                            const Expanded(
+                              flex: 4,
+                              child: _ServicesGridSection(),
                             ),
 
-                            const SizedBox(width: 60),
+                            const SizedBox(width: 48),
 
-                            _SocialConnectColumn(),
+                            Expanded(
+                              flex: 3,
+                              child: _SocialConnectSection(),
+                            ),
                           ],
                         ),
                       ],
 
-                      SizedBox(height: isMobile ? 40 : 80),
+                      SizedBox(height: isMobile ? 48 : 80),
 
                       const Divider(color: AppTheme.greyBorder),
 
@@ -870,7 +868,8 @@ class _AgencyFooterState extends State<AgencyFooter> {
                               '© 2026 TEVAH TECH SOLUTIONS PRIVATE LIMITED',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: isMobile ? 10 : 12,
-                                color: Colors.white38,
+                                color: Colors.white30,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
@@ -895,6 +894,87 @@ class _AgencyFooterState extends State<AgencyFooter> {
 }
 
 // ============================================================================
+// FOOTER - LIVE AVAILABILITY BADGE
+// ============================================================================
+
+class _AvailabilityStatusBadge extends StatefulWidget {
+  const _AvailabilityStatusBadge();
+
+  @override
+  State<_AvailabilityStatusBadge> createState() =>
+      _AvailabilityStatusBadgeState();
+}
+
+class _AvailabilityStatusBadgeState extends State<_AvailabilityStatusBadge>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              return Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF10B981),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(
+                        0xFF10B981,
+                      ).withOpacity(_pulseController.value * 0.8),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'AVAILABLE FOR NEW PROJECTS',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: const Color(0xFF34D399),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
 // FOOTER - BRAND SUMMARY
 // ============================================================================
 
@@ -904,128 +984,197 @@ class _BrandSummary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'TEVAH',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.0,
-            color: Colors.white,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        Text(
-          'Technology.\n'
-          'Creativity.\n'
-          'Intelligence.',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13,
-            height: 1.5,
-            color: Colors.white38,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ============================================================================
-// FOOTER - EMAIL
-// ============================================================================
-
-class _MajorEmailSection extends StatelessWidget {
-  final bool isCopied;
-  final VoidCallback onCopy;
-
-  const _MajorEmailSection({required this.isCopied, required this.onCopy});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'HAVE A PROJECT?',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.brandRed,
-            letterSpacing: 2.0,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
         Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'support@tevah.tech',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 0.5,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppTheme.brandRed,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'T',
+                style: TextStyle(
+                  fontFamily: 'Thunder',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
               ),
             ),
-
-            const SizedBox(width: 12),
-
-            InkWell(
-              onTap: onCopy,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: isCopied
-                      ? AppTheme.brandRed
-                      : Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      isCopied ? Icons.check : Icons.copy_rounded,
-                      size: 12,
-                      color: Colors.white,
-                    ),
-
-                    const SizedBox(width: 4),
-
-                    Text(
-                      isCopied ? 'COPIED' : ' ',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+            const SizedBox(width: 10),
+            Text(
+              'TEVAH',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: Colors.white,
               ),
             ),
           ],
         ),
+
+        const SizedBox(height: 12),
+
+        Text(
+          'Technology. Creativity. Intelligence.\nCrafting future-ready digital platforms and experiences.',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            height: 1.6,
+            color: Colors.white54,
+          ),
+        ),
       ],
     );
   }
 }
 
 // ============================================================================
-// FOOTER NAVIGATION COLUMN
+// FOOTER - EMAIL BENTO CARD
 // ============================================================================
 
-class _FooterInteractiveNavColumn extends StatelessWidget {
-  final String title;
+class _EmailInteractiveBentoCard extends StatefulWidget {
+  final bool isCopied;
+  final VoidCallback onCopy;
 
-  final List<Map<String, dynamic>> links;
+  const _EmailInteractiveBentoCard({
+    required this.isCopied,
+    required this.onCopy,
+  });
 
-  const _FooterInteractiveNavColumn({required this.title, required this.links});
+  @override
+  State<_EmailInteractiveBentoCard> createState() =>
+      _EmailInteractiveBentoCardState();
+}
+
+class _EmailInteractiveBentoCardState extends State<_EmailInteractiveBentoCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(_isHovered ? 0.04 : 0.02),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _isHovered
+                ? AppTheme.brandRed.withOpacity(0.6)
+                : AppTheme.greyBorder,
+          ),
+          boxShadow: _isHovered
+              ? [
+            BoxShadow(
+              color: AppTheme.brandRed.withOpacity(0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ]
+              : [],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'HAVE A PROJECT?',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.brandRed,
+                    letterSpacing: 2.0,
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_outward_rounded,
+                  size: 16,
+                  color: _isHovered ? AppTheme.brandRed : Colors.white24,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'support@tevah.technology',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: widget.onCopy,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: widget.isCopied
+                          ? AppTheme.brandRed
+                          : Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.isCopied
+                              ? Icons.check_rounded
+                              : Icons.copy_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          widget.isCopied ? 'COPIED' : 'COPY',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// FOOTER SERVICES GRID & TAGS
+// ============================================================================
+
+class _ServicesGridSection extends StatelessWidget {
+  const _ServicesGridSection();
+
+  static const List<String> services = [
+    'Web Development',
+    'Mobile Apps',
+    'AI & Automation',
+    'UI / UX Design',
+    'Brand Identity',
+    'Video & Motion',
+    'WordPress',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -1033,7 +1182,7 @@ class _FooterInteractiveNavColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title,
+          'SERVICES',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
             fontWeight: FontWeight.bold,
@@ -1041,130 +1190,53 @@ class _FooterInteractiveNavColumn extends StatelessWidget {
             letterSpacing: 2.0,
           ),
         ),
-
-        const SizedBox(height: 20),
-
-        ...links.map((link) {
-          return _FooterLinkRow(
-            label: link['label'] as String,
-            route: link['route'] as NavRoute?,
-          );
-        }),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: services.map((s) => _ServiceTag(label: s)).toList(),
+        ),
       ],
     );
   }
 }
 
-// ============================================================================
-// FOOTER LINK ROW
-// ============================================================================
-
-class _FooterLinkRow extends StatefulWidget {
+class _ServiceTag extends StatefulWidget {
   final String label;
-  final NavRoute? route;
-
-  const _FooterLinkRow({required this.label, this.route});
+  const _ServiceTag({required this.label});
 
   @override
-  State<_FooterLinkRow> createState() => _FooterLinkRowState();
+  State<_ServiceTag> createState() => _ServiceTagState();
 }
 
-class _FooterLinkRowState extends State<_FooterLinkRow> {
-  bool _isHovered = false;
-
-  void _navigate(BuildContext context) {
-    if (widget.route == null) {
-      return;
-    }
-
-    if (widget.route == NavRoute.dropbox) {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (context) => const DropboxPage()));
-
-      return;
-    }
-
-    Widget page;
-
-    switch (widget.route!) {
-      case NavRoute.home:
-        page = const MainAgencyScreen();
-        break;
-
-      case NavRoute.about:
-        page = const AboutScreen();
-        break;
-
-      case NavRoute.portfolio:
-        page = const PortfolioScreen();
-        break;
-
-      default:
-        return;
-    }
-
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => page,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
-  }
+class _ServiceTagState extends State<_ServiceTag> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.route != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      onEnter: (_) {
-        setState(() {
-          _isHovered = true;
-        });
-      },
-      onExit: (_) {
-        setState(() {
-          _isHovered = false;
-        });
-      },
-      child: GestureDetector(
-        onTap: () {
-          _navigate(context);
-        },
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 14.0),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.translationValues(_isHovered ? 8 : 0, 0, 0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.label,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _isHovered ? AppTheme.brandRed : Colors.white70,
-                  ),
-                ),
-
-                const SizedBox(width: 6),
-
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200),
-                  opacity: _isHovered ? 1.0 : 0.0,
-                  child: const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 14,
-                    color: AppTheme.brandRed,
-                  ),
-                ),
-              ],
-            ),
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: _hovered
+              ? AppTheme.brandRed.withOpacity(0.12)
+              : Colors.white.withOpacity(0.025),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: _hovered
+                ? AppTheme.brandRed.withOpacity(0.5)
+                : Colors.white.withOpacity(0.06),
+          ),
+        ),
+        child: Text(
+          widget.label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: _hovered ? Colors.white : Colors.white70,
           ),
         ),
       ),
@@ -1173,12 +1245,25 @@ class _FooterLinkRowState extends State<_FooterLinkRow> {
 }
 
 // ============================================================================
-// SOCIAL CONNECT
+// FOOTER SOCIAL CONNECT
 // ============================================================================
 
-class _SocialConnectColumn extends StatelessWidget {
-  static const List<Map<String, String>> socials = [
-    {'name': 'Instagram', 'url': 'https://instagram.com'},
+// ============================================================================
+// FOOTER SOCIAL CONNECT
+// ============================================================================
+
+class _SocialConnectSection extends StatelessWidget {
+  static const List<Map<String, dynamic>> socials = [
+    {
+      'name': 'Instagram',
+      'icon': FontAwesomeIcons.instagram,
+      'url': 'https://www.instagram.com/tevahtechsolutions?igsh=eXV0dDBneXh5ejJw',
+    },
+    // {
+    //   'name': 'LinkedIn',
+    //   'icon': FontAwesomeIcons.linkedin,
+    //   'url': 'https://linkedin.com',
+    // },
   ];
 
   @override
@@ -1195,18 +1280,15 @@ class _SocialConnectColumn extends StatelessWidget {
             letterSpacing: 2.0,
           ),
         ),
-
-        const SizedBox(height: 20),
-
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
           children: socials.map((social) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10.0),
-              child: _MagneticSocialBadge(
-                name: social['name']!,
-                url: social['url']!,
-              ),
+            return _IconSocialBadge(
+              name: social['name'] as String,
+              icon: social['icon'] as dynamic,
+              url: social['url'] as String,
             );
           }).toList(),
         ),
@@ -1215,26 +1297,26 @@ class _SocialConnectColumn extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// SOCIAL BADGE
-// ============================================================================
-
-class _MagneticSocialBadge extends StatefulWidget {
+class _IconSocialBadge extends StatefulWidget {
   final String name;
+  final dynamic icon;
   final String url;
 
-  const _MagneticSocialBadge({required this.name, required this.url});
+  const _IconSocialBadge({
+    required this.name,
+    required this.icon,
+    required this.url,
+  });
 
   @override
-  State<_MagneticSocialBadge> createState() => _MagneticSocialBadgeState();
+  State<_IconSocialBadge> createState() => _IconSocialBadgeState();
 }
 
-class _MagneticSocialBadgeState extends State<_MagneticSocialBadge> {
-  bool _isHovered = false;
+class _IconSocialBadgeState extends State<_IconSocialBadge> {
+  bool _hovered = false;
 
-  Future<void> _launchSocial() async {
+  Future<void> _launch() async {
     final Uri uri = Uri.parse(widget.url);
-
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -1244,51 +1326,37 @@ class _MagneticSocialBadgeState extends State<_MagneticSocialBadge> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) {
-        setState(() {
-          _isHovered = true;
-        });
-      },
-      onExit: (_) {
-        setState(() {
-          _isHovered = false;
-        });
-      },
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: _launchSocial,
+        onTap: _launch,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: _isHovered
+            color: _hovered
                 ? AppTheme.brandRed
-                : Colors.white.withOpacity(0.04),
-            borderRadius: BorderRadius.circular(20),
+                : Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: _isHovered ? AppTheme.brandRed : AppTheme.greyBorder,
+              color: _hovered ? AppTheme.brandRed : AppTheme.greyBorder,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: _isHovered ? 8 : 6,
-                height: _isHovered ? 8 : 6,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _isHovered ? Colors.white : AppTheme.brandRed,
-                ),
+              FaIcon(
+                widget.icon,
+                size: 13,
+                color: _hovered ? Colors.white : Colors.white70,
               ),
-
               const SizedBox(width: 8),
-
               Text(
                 widget.name,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: _isHovered ? Colors.white : Colors.white70,
+                  fontWeight: FontWeight.w600,
+                  color: _hovered ? Colors.white : Colors.white70,
                 ),
               ),
             ],
@@ -1388,7 +1456,7 @@ class FloatingWhatsAppButton extends StatefulWidget {
     super.key,
     this.phoneNumber = '9188075549',
     this.defaultMessage =
-        'Hello TEVAH team, I would like to discuss a project!',
+    'Hello TEVAH team, I would like to discuss a project!',
   });
 
   @override
@@ -1498,14 +1566,14 @@ class FooterAtmospherePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Paint glowPaint = Paint()
       ..shader =
-          RadialGradient(
-            colors: [AppTheme.brandRed.withOpacity(0.12), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width / 2, size.height * 0.35),
-              radius: size.width * 0.5,
-            ),
-          );
+      RadialGradient(
+        colors: [AppTheme.brandRed.withOpacity(0.12), Colors.transparent],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width / 2, size.height * 0.35),
+          radius: size.width * 0.5,
+        ),
+      );
 
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), glowPaint);
 

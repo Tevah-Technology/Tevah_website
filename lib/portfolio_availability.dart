@@ -5,7 +5,7 @@ import 'environmental.dart';
 
 class PortfolioAvailabilityService {
   static String apiUrl =
-      'http://localhost:3000/api/portfolio';
+      '$Vercel_url';
 
   static Future<bool> isPortfolioAvailable() async {
     print('');
@@ -13,8 +13,8 @@ class PortfolioAvailabilityService {
     print('CHECKING PORTFOLIO AVAILABILITY');
     print('========================================');
 
-    print('Ngrok_url:');
-    print(Ngrok_url);
+    // print('Ngrok_url:');
+    // print(Ngrok_url);
 
     print('');
     print('Final Portfolio API URL:');
