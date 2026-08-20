@@ -22,8 +22,7 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
     with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
 
-  late final Ticker _vsyncTicker;
-
+  Ticker? _vsyncTicker;
   double _targetScroll = 0.0;
   double _smoothScroll = 0.0;
   double _scrollVelocity = 0.0;
@@ -31,8 +30,12 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
 
   final ValueNotifier<double> _scrollNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<double> _velocityNotifier = ValueNotifier<double>(0.0);
-  final ValueNotifier<Offset> _rawCursorNotifier = ValueNotifier<Offset>(Offset.zero);
-  final ValueNotifier<Offset> _smoothCursorNotifier = ValueNotifier<Offset>(Offset.zero);
+  final ValueNotifier<Offset> _rawCursorNotifier = ValueNotifier<Offset>(
+    Offset.zero,
+  );
+  final ValueNotifier<Offset> _smoothCursorNotifier = ValueNotifier<Offset>(
+    Offset.zero,
+  );
   final ValueNotifier<bool> _isHoveringNotifier = ValueNotifier<bool>(false);
 
   String _cursorText = '';
@@ -46,19 +49,19 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
     _badgeRotateController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 14),
-    )..repeat();
+    );
 
     _particleController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
-    )..repeat();
+    );
 
     _scrollController.addListener(() {
       if (_scrollController.hasClients) {
-        final double current = _scrollController.offset;
+        final current = _scrollController.offset;
+
         _scrollNotifier.value = current;
 
-        // Synchronize target with native scrollbar drag or touch drag
         if (!_isWheeling) {
           _targetScroll = current;
           _smoothScroll = current;
@@ -66,11 +69,17 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
       }
     });
 
-    // Hardware-accelerated frame update tied to refresh rate
-    _vsyncTicker = createTicker((Duration elapsed) {
-      _updateSmoothScroll();
-      _updateSmoothCursor();
-    })..start();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      _badgeRotateController.repeat();
+      _particleController.repeat();
+
+      _vsyncTicker = createTicker((elapsed) {
+        _updateSmoothScroll();
+        _updateSmoothCursor();
+      })..start();
+    });
   }
 
   void _updateSmoothScroll() {
@@ -126,15 +135,19 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
 
   @override
   void dispose() {
-    _vsyncTicker.dispose();
+    _vsyncTicker?.dispose();
+
+    _badgeRotateController.dispose();
+    _particleController.dispose();
+
     _scrollController.dispose();
+
     _scrollNotifier.dispose();
     _velocityNotifier.dispose();
     _rawCursorNotifier.dispose();
     _smoothCursorNotifier.dispose();
     _isHoveringNotifier.dispose();
-    _badgeRotateController.dispose();
-    _particleController.dispose();
+
     super.dispose();
   }
 
@@ -183,8 +196,8 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                 controller: _scrollController,
                 physics: isMobile
                     ? const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                )
+                        parent: AlwaysScrollableScrollPhysics(),
+                      )
                     : const ClampingScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
@@ -257,18 +270,18 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '99%',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 42,
-                                          fontWeight: FontWeight.w700,
-                                          height: 1.0,
-                                          color: Colors.white,
-                                          letterSpacing: -1.0,
-                                        ),
-                                      )
+                                            '99%',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 42,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1.0,
+                                              color: Colors.white,
+                                              letterSpacing: -1.0,
+                                            ),
+                                          )
                                           .animate()
                                           .fadeIn(delay: 200.ms)
                                           .slideY(begin: 0.2, end: 0),
@@ -288,18 +301,18 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '150+',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 42,
-                                          fontWeight: FontWeight.w700,
-                                          height: 1.0,
-                                          color: Colors.white,
-                                          letterSpacing: -1.0,
-                                        ),
-                                      )
+                                            '150+',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 42,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1.0,
+                                              color: Colors.white,
+                                              letterSpacing: -1.0,
+                                            ),
+                                          )
                                           .animate()
                                           .fadeIn(delay: 350.ms)
                                           .slideY(begin: 0.2, end: 0),
@@ -367,50 +380,50 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                 Expanded(
                                   flex: 5,
                                   child:
-                                  const AnimatedTypewriterHeadline(
-                                    brandRed: AppTheme.brandRed,
-                                  )
-                                      .animate()
-                                      .fadeIn(
-                                    duration: 800.ms,
-                                    curve: Curves.easeOut,
-                                  )
-                                      .slideX(
-                                    begin: -0.15,
-                                    end: 0,
-                                    duration: 900.ms,
-                                    curve: Curves.easeOutCubic,
-                                  ),
+                                      const AnimatedTypewriterHeadline(
+                                            brandRed: AppTheme.brandRed,
+                                          )
+                                          .animate()
+                                          .fadeIn(
+                                            duration: 800.ms,
+                                            curve: Curves.easeOut,
+                                          )
+                                          .slideX(
+                                            begin: -0.15,
+                                            end: 0,
+                                            duration: 900.ms,
+                                            curve: Curves.easeOutCubic,
+                                          ),
                                 ),
                                 const SizedBox(width: 48),
                                 Expanded(
                                   flex: 4,
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const SizedBox(height: 10),
                                       Row(
                                         crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  '99%',
-                                                  style:
-                                                  GoogleFonts.plusJakartaSans(
-                                                    fontSize: 72,
-                                                    fontWeight:
-                                                    FontWeight.w700,
-                                                    height: 1.0,
-                                                    color: Colors.white,
-                                                    letterSpacing: -2.0,
-                                                  ),
-                                                )
+                                                      '99%',
+                                                      style:
+                                                          GoogleFonts.plusJakartaSans(
+                                                            fontSize: 72,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            height: 1.0,
+                                                            color: Colors.white,
+                                                            letterSpacing: -2.0,
+                                                          ),
+                                                    )
                                                     .animate()
                                                     .fadeIn(delay: 200.ms)
                                                     .slideY(begin: 0.2, end: 0),
@@ -418,13 +431,13 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                                 Text(
                                                   'UPTIME',
                                                   style:
-                                                  GoogleFonts.plusJakartaSans(
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                    FontWeight.bold,
-                                                    color: Colors.white60,
-                                                    letterSpacing: 1.5,
-                                                  ),
+                                                      GoogleFonts.plusJakartaSans(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.white60,
+                                                        letterSpacing: 1.5,
+                                                      ),
                                                 ),
                                               ],
                                             ),
@@ -432,20 +445,20 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  '150+',
-                                                  style:
-                                                  GoogleFonts.plusJakartaSans(
-                                                    fontSize: 72,
-                                                    fontWeight:
-                                                    FontWeight.w700,
-                                                    height: 1.0,
-                                                    color: Colors.white,
-                                                    letterSpacing: -2.0,
-                                                  ),
-                                                )
+                                                      '150+',
+                                                      style:
+                                                          GoogleFonts.plusJakartaSans(
+                                                            fontSize: 72,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            height: 1.0,
+                                                            color: Colors.white,
+                                                            letterSpacing: -2.0,
+                                                          ),
+                                                    )
                                                     .animate()
                                                     .fadeIn(delay: 350.ms)
                                                     .slideY(begin: 0.2, end: 0),
@@ -453,13 +466,13 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                                 Text(
                                                   'SOLUTIONS',
                                                   style:
-                                                  GoogleFonts.plusJakartaSans(
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                    FontWeight.bold,
-                                                    color: Colors.white60,
-                                                    letterSpacing: 1.5,
-                                                  ),
+                                                      GoogleFonts.plusJakartaSans(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.white60,
+                                                        letterSpacing: 1.5,
+                                                      ),
                                                 ),
                                               ],
                                             ),
@@ -498,18 +511,18 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                               ),
                               const SizedBox(width: 12),
                               const Icon(
-                                Icons.arrow_downward_rounded,
-                                color: AppTheme.brandRed,
-                                size: 16,
-                              )
+                                    Icons.arrow_downward_rounded,
+                                    color: AppTheme.brandRed,
+                                    size: 16,
+                                  )
                                   .animate(
-                                onPlay: (c) => c.repeat(reverse: true),
-                              )
+                                    onPlay: (c) => c.repeat(reverse: true),
+                                  )
                                   .slideY(
-                                begin: -0.2,
-                                end: 0.3,
-                                duration: 800.ms,
-                              ),
+                                    begin: -0.2,
+                                    end: 0.3,
+                                    duration: 800.ms,
+                                  ),
                             ],
                           ),
                         ],
@@ -559,22 +572,22 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                   PageRouteBuilder(
                                     pageBuilder:
                                         (
-                                        context,
-                                        animation,
-                                        secondaryAnimation,
+                                          context,
+                                          animation,
+                                          secondaryAnimation,
                                         ) => const AboutScreen(),
                                     transitionsBuilder:
                                         (
-                                        context,
-                                        animation,
-                                        secondaryAnimation,
-                                        child,
+                                          context,
+                                          animation,
+                                          secondaryAnimation,
+                                          child,
                                         ) {
-                                      return FadeTransition(
-                                        opacity: animation,
-                                        child: child,
-                                      );
-                                    },
+                                          return FadeTransition(
+                                            opacity: animation,
+                                            child: child,
+                                          );
+                                        },
                                     transitionDuration: const Duration(
                                       milliseconds: 400,
                                     ),
@@ -608,7 +621,7 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                   SliverToBoxAdapter(
                     child: ContinuousTickerStrip(
                       text:
-                      'DIGITAL • TECHNOLOGY • AI • DESIGN • MOTION • PLATFORMS • ',
+                          'DIGITAL • TECHNOLOGY • AI • DESIGN • MOTION • PLATFORMS • ',
                       directionRight: true,
                     ),
                   ),
@@ -646,7 +659,7 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                   SliverToBoxAdapter(
                     child: ContinuousTickerStrip(
                       text:
-                      'TEVAH — BUILDING WHAT\'S NEXT — TEVAH — BUILDING WHAT\'S NEXT — ',
+                          'TEVAH — BUILDING WHAT\'S NEXT — TEVAH — BUILDING WHAT\'S NEXT — ',
                       directionRight: false,
                     ),
                   ),
@@ -837,7 +850,8 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                 ValueListenableBuilder<Offset>(
                   valueListenable: _smoothCursorNotifier,
                   builder: (context, cursorPos, child) {
-                    if (cursorPos == Offset.zero) return const SizedBox.shrink();
+                    if (cursorPos == Offset.zero)
+                      return const SizedBox.shrink();
 
                     return ValueListenableBuilder<bool>(
                       valueListenable: _isHoveringNotifier,
@@ -866,8 +880,13 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (isHovering ? AppTheme.brandRed : Colors.white)
-                                        .withOpacity(isHovering ? 0.45 : 0.2),
+                                    color:
+                                        (isHovering
+                                                ? AppTheme.brandRed
+                                                : Colors.white)
+                                            .withOpacity(
+                                              isHovering ? 0.45 : 0.2,
+                                            ),
                                     blurRadius: isHovering ? 22 : 8,
                                     spreadRadius: isHovering ? 2 : 0,
                                   ),
@@ -875,16 +894,16 @@ class _MainAgencyScreenState extends State<MainAgencyScreen>
                               ),
                               child: isHovering && _cursorText.isNotEmpty
                                   ? Center(
-                                child: Text(
-                                  _cursorText,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 11,
-                                    color: Colors.white,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              )
+                                      child: Text(
+                                        _cursorText,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 11,
+                                          color: Colors.white,
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    )
                                   : null,
                             ),
                           ),
@@ -1274,42 +1293,42 @@ class InteractiveServicesSection extends StatefulWidget {
       'title': 'WEB EXPERIENCES',
       'subtags': ['UX / UI', 'FRONTEND', 'HEADLESS CMS', 'PERFORMANCE'],
       'imageUrl':
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
     },
     {
       'number': '02',
       'title': 'MOBILE APPLICATIONS',
       'subtags': ['iOS NATIVE', 'ANDROID', 'FLUTTER', 'OFFLINE SYNC'],
       'imageUrl':
-      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80',
     },
     {
       'number': '03',
       'title': 'AI & AUTOMATION',
       'subtags': ['AI AGENTS', 'WORKFLOWS', 'LLM INTEGRATION', 'BI'],
       'imageUrl':
-      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
     },
     {
       'number': '04',
       'title': 'BRAND & GRAPHICS',
       'subtags': ['VISUAL IDENTITY', 'VECTOR SYSTEMS', 'EDITORIAL'],
       'imageUrl':
-      'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80',
     },
     {
       'number': '05',
       'title': 'VIDEO & MOTION',
       'subtags': ['3D CGI RENDERS', 'SHOWREELS', 'BROADCAST VFX'],
       'imageUrl':
-      'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=800&q=80',
     },
     {
       'number': '06',
       'title': 'DIGITAL PRODUCTS',
       'subtags': ['SAAS ARCHITECTURE', 'CLOUD', 'DEVOPS', 'SCALING'],
       'imageUrl':
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80',
     },
   ];
 
@@ -1368,7 +1387,7 @@ class _InteractiveServicesSectionState
                 Column(
                   children: List.generate(
                     InteractiveServicesSection.services.length,
-                        (index) {
+                    (index) {
                       final item = InteractiveServicesSection.services[index];
                       final bool isHovered = _activeHoverIndex == index;
 
@@ -1424,8 +1443,8 @@ class _InteractiveServicesSectionState
                               children: [
                                 Image.network(
                                   InteractiveServicesSection
-                                      .services[_activeHoverIndex]['imageUrl']
-                                  as String,
+                                          .services[_activeHoverIndex]['imageUrl']
+                                      as String,
                                   fit: BoxFit.cover,
                                 ),
                                 Container(
@@ -1512,93 +1531,93 @@ class _ServiceInteractiveRow extends StatelessWidget {
             ),
             child: isMobile
                 ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      number,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: isHovered
-                            ? AppTheme.brandRed
-                            : Colors.white30,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            number,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: isHovered
+                                  ? AppTheme.brandRed
+                                  : Colors.white30,
+                            ),
+                          ),
+                          _ArrowCircleBadge(isHovered: isHovered, size: 28),
+                        ],
                       ),
-                    ),
-                    _ArrowCircleBadge(isHovered: isHovered, size: 28),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: isHovered
-                        ? Colors.white
-                        : Colors.white.withOpacity(0.9),
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: subtags
-                      .map(
-                        (tag) =>
-                        _MiniTagPill(tag: tag, isHovered: isHovered),
+                      const SizedBox(height: 8),
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: isHovered
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.9),
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: subtags
+                            .map(
+                              (tag) =>
+                                  _MiniTagPill(tag: tag, isHovered: isHovered),
+                            )
+                            .toList(),
+                      ),
+                    ],
                   )
-                      .toList(),
-                ),
-              ],
-            )
                 : Row(
-              children: [
-                Text(
-                  number,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: isHovered ? AppTheme.brandRed : Colors.white30,
-                  ),
-                ),
-                const SizedBox(width: 36),
-                Expanded(
-                  flex: 5,
-                  child: Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.0,
-                      color: isHovered
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.85),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 6,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: subtags
-                        .map(
-                          (tag) => _MiniTagPill(
-                        tag: tag,
-                        isHovered: isHovered,
+                    children: [
+                      Text(
+                        number,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: isHovered ? AppTheme.brandRed : Colors.white30,
+                        ),
                       ),
-                    )
-                        .toList(),
+                      const SizedBox(width: 36),
+                      Expanded(
+                        flex: 5,
+                        child: Text(
+                          title,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.0,
+                            color: isHovered
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.85),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 6,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: subtags
+                              .map(
+                                (tag) => _MiniTagPill(
+                                  tag: tag,
+                                  isHovered: isHovered,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      _ArrowCircleBadge(isHovered: isHovered, size: 38),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 24),
-                _ArrowCircleBadge(isHovered: isHovered, size: 38),
-              ],
-            ),
           ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -1672,11 +1691,11 @@ class _ArrowCircleBadge extends StatelessWidget {
         ),
         boxShadow: isHovered
             ? [
-          BoxShadow(
-            color: AppTheme.brandRed.withOpacity(0.4),
-            blurRadius: 12,
-          ),
-        ]
+                BoxShadow(
+                  color: AppTheme.brandRed.withOpacity(0.4),
+                  blurRadius: 12,
+                ),
+              ]
             : [],
       ),
       child: AnimatedRotation(
@@ -1707,7 +1726,7 @@ class StickyWhyTevahSection extends StatefulWidget {
       'title': 'THINK DIFFERENT.',
       'tagline': 'FIRST PRINCIPLES ARCHITECTURE',
       'desc':
-      'We challenge legacy assumptions before writing code, transforming complex business logic into high-leverage digital assets.',
+          'We challenge legacy assumptions before writing code, transforming complex business logic into high-leverage digital assets.',
       'tags': ['FIRST PRINCIPLES', 'PROFIT ARCHITECTURE', 'DE-RISKED CORE'],
       'metric': '4.2x ROI LEVERAGE',
     },
@@ -1716,7 +1735,7 @@ class StickyWhyTevahSection extends StatefulWidget {
       'title': 'DESIGN WITH PURPOSE.',
       'tagline': 'SUB-SECOND INTERACTION PHYSICS',
       'desc':
-      'Sub-second cognitive clarity meets high-conversion visual design built specifically for modern audience retention.',
+          'Sub-second cognitive clarity meets high-conversion visual design built specifically for modern audience retention.',
       'tags': ['SUB-10MS LATENCY', 'RETENTION MATRIX', 'MICRO-PHYSICS'],
       'metric': '99.8% USER RETENTION',
     },
@@ -1725,7 +1744,7 @@ class StickyWhyTevahSection extends StatefulWidget {
       'title': 'BUILD TO SCALE.',
       'tagline': 'DISTRIBUTED EDGE SYSTEMS',
       'desc':
-      'Headless architectures and distributed edge deployments engineered to effortlessly handle multi-million global traffic spikes.',
+          'Headless architectures and distributed edge deployments engineered to effortlessly handle multi-million global traffic spikes.',
       'tags': ['DISTRIBUTED EDGE', '99.99% UPTIME', 'AUTO-BALANCED'],
       'metric': '10M+ REQ / SEC',
     },
@@ -1734,7 +1753,7 @@ class StickyWhyTevahSection extends StatefulWidget {
       'title': 'AI NATIVE.',
       'tagline': 'NEURAL PIPELINE INTEGRATION',
       'desc':
-      'Machine intelligence and autonomous agent logic baked directly into core system logic—never glued on as a superficial add-on.',
+          'Machine intelligence and autonomous agent logic baked directly into core system logic—never glued on as a superficial add-on.',
       'tags': ['LLM AGENTS', 'EVENT-DRIVEN BI', 'VECTOR PIPELINES'],
       'metric': '75% OPS AUTOMATED',
     },
@@ -1743,7 +1762,7 @@ class StickyWhyTevahSection extends StatefulWidget {
       'title': 'CREATE IMPACT.',
       'tagline': 'COMPOUND BUSINESS VELOCITY',
       'desc':
-      'Radically reduced operational friction, ultra-low latencies, and accelerated digital expansion.',
+          'Radically reduced operational friction, ultra-low latencies, and accelerated digital expansion.',
       'tags': ['COMPOUND GROWTH', 'ENTERPRISE READY', 'SCALED VELOCITY'],
       'metric': '100% AUDIT ACCREDITED',
     },
@@ -1793,9 +1812,9 @@ class _StickyWhyTevahSectionState extends State<StickyWhyTevahSection>
     final int activeIndex = _hoveredIndex != -1
         ? _hoveredIndex
         : scrollProgress.round().clamp(
-      0,
-      StickyWhyTevahSection.stories.length - 1,
-    );
+            0,
+            StickyWhyTevahSection.stories.length - 1,
+          );
 
     final activeStory = StickyWhyTevahSection.stories[activeIndex];
 
@@ -1803,244 +1822,311 @@ class _StickyWhyTevahSectionState extends State<StickyWhyTevahSection>
       padding: EdgeInsets.symmetric(horizontal: padding),
       child: isMobile
           ? Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'WHY\nTEVAH?',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 40,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Column(
-            children: List.generate(
-              StickyWhyTevahSection.stories.length,
-                  (index) {
-                final story = StickyWhyTevahSection.stories[index];
-                final bool isSelected = activeIndex == index;
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF141419)
-                        : const Color(0xFF0C0C0E),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppTheme.brandRed
-                          : Colors.white10,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            story['num'] as String,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.brandRed,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.brandRed.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              story['metric'] as String,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.brandRed,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        story['title'] as String,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        story['desc'] as String,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          height: 1.5,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      )
-          : Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Huge Watermark HUD Digits
-          Positioned(
-            left: -40,
-            top: -20,
-            child: IgnorePointer(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(
-                      scale: Tween<double>(
-                        begin: 0.92,
-                        end: 1.0,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: Text(
-                  activeStory['num'] as String,
-                  key: ValueKey<String>(activeStory['num'] as String),
-                  style: TextStyle(
-                    fontFamily: 'Thunder',
-                    fontSize: 420,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'WHY\nTEVAH?',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 40,
                     fontWeight: FontWeight.w900,
-                    height: 0.7,
-                    color: Colors.white.withOpacity(0.015),
-                    letterSpacing: -10.0,
+                    color: Colors.white,
+                    letterSpacing: -1.5,
                   ),
                 ),
-              ),
-            ),
-          ),
+                const SizedBox(height: 24),
+                Column(
+                  children: List.generate(
+                    StickyWhyTevahSection.stories.length,
+                    (index) {
+                      final story = StickyWhyTevahSection.stories[index];
+                      final bool isSelected = activeIndex == index;
 
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Sticky Left Header
-              Expanded(
-                flex: 4,
-                child: Column(
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF141419)
+                              : const Color(0xFF0C0C0E),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppTheme.brandRed
+                                : Colors.white10,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  story['num'] as String,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.brandRed,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.brandRed.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    story['metric'] as String,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.brandRed,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              story['title'] as String,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              story['desc'] as String,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            )
+          : Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Huge Watermark HUD Digits
+                Positioned(
+                  left: -40,
+                  top: -20,
+                  child: IgnorePointer(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: ScaleTransition(
+                            scale: Tween<double>(
+                              begin: 0.92,
+                              end: 1.0,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Text(
+                        activeStory['num'] as String,
+                        key: ValueKey<String>(activeStory['num'] as String),
+                        style: TextStyle(
+                          fontFamily: 'Thunder',
+                          fontSize: 420,
+                          fontWeight: FontWeight.w900,
+                          height: 0.7,
+                          color: Colors.white.withOpacity(0.015),
+                          letterSpacing: -10.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.brandRed,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'SYSTEM ARCHITECTURE',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.brandRed,
-                            letterSpacing: 2.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'WHY\nTEVAH?',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 72,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -3.0,
-                        height: 0.95,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    Container(
-                      height: 3,
-                      width: 80,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.brandRed, Colors.transparent],
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 36),
-                    Text(
-                      'ENGINEERING RIGOR\nAI NATIVE SYSTEMS\nHIGH CONVERSION UI',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        height: 1.8,
-                        color: Colors.white38,
-                        letterSpacing: 1.8,
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-
-                    // Live Telemetry Widget
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.02),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.06),
-                        ),
-                      ),
+                    // Sticky Left Header
+                    Expanded(
+                      flex: 4,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(
-                                Icons.bolt_rounded,
-                                size: 14,
-                                color: AppTheme.brandRed,
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppTheme.brandRed,
+                                ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Text(
-                                'TELEMETRY CORE',
+                                'SYSTEM ARCHITECTURE',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white60,
-                                  letterSpacing: 1.2,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.brandRed,
+                                  letterSpacing: 2.5,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 16),
                           Text(
-                            activeStory['metric'] as String,
+                            'WHY\nTEVAH?',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16,
+                              fontSize: 72,
                               fontWeight: FontWeight.w900,
+                              letterSpacing: -3.0,
+                              height: 0.95,
                               color: Colors.white,
-                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          Container(
+                            height: 3,
+                            width: 80,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppTheme.brandRed, Colors.transparent],
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(height: 36),
+                          Text(
+                            'ENGINEERING RIGOR\nAI NATIVE SYSTEMS\nHIGH CONVERSION UI',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              height: 1.8,
+                              color: Colors.white38,
+                              letterSpacing: 1.8,
+                            ),
+                          ),
+                          const SizedBox(height: 48),
+
+                          // Live Telemetry Widget
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.02),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.06),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.bolt_rounded,
+                                      size: 14,
+                                      color: AppTheme.brandRed,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'TELEMETRY CORE',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white60,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  activeStory['metric'] as String,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 32),
+
+                    // Circuit + Card Stack Column
+                    Expanded(
+                      flex: 7,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Circuit Track Custom Paint
+                          Positioned.fill(
+                            child: AnimatedBuilder(
+                              animation: _pulseController,
+                              builder: (context, child) {
+                                return CustomPaint(
+                                  painter: _CyberMotherboardPainter(
+                                    totalItems:
+                                        StickyWhyTevahSection.stories.length,
+                                    activeIndex: activeIndex,
+                                    scrollProgress: _hoveredIndex != -1
+                                        ? _hoveredIndex.toDouble()
+                                        : scrollProgress,
+                                    pulseValue: _pulseController.value,
+                                    brandColor: AppTheme.brandRed,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          // Cards List
+                          Padding(
+                            padding: const EdgeInsets.only(left: 48.0),
+                            child: Column(
+                              children: List.generate(
+                                StickyWhyTevahSection.stories.length,
+                                (index) {
+                                  final story =
+                                      StickyWhyTevahSection.stories[index];
+                                  final bool isSelected = activeIndex == index;
+                                  final bool isHovered = _hoveredIndex == index;
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 28.0,
+                                    ),
+                                    child: _FuturisticTiltCard(
+                                      story: story,
+                                      isSelected: isSelected,
+                                      isHovered: isHovered,
+                                      onHover: (h) {
+                                        setState(() {
+                                          _hoveredIndex = h ? index : -1;
+                                        });
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ],
@@ -2048,75 +2134,8 @@ class _StickyWhyTevahSectionState extends State<StickyWhyTevahSection>
                     ),
                   ],
                 ),
-              ),
-
-              const SizedBox(width: 32),
-
-              // Circuit + Card Stack Column
-              Expanded(
-                flex: 7,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Circuit Track Custom Paint
-                    Positioned.fill(
-                      child: AnimatedBuilder(
-                        animation: _pulseController,
-                        builder: (context, child) {
-                          return CustomPaint(
-                            painter: _CyberMotherboardPainter(
-                              totalItems:
-                              StickyWhyTevahSection.stories.length,
-                              activeIndex: activeIndex,
-                              scrollProgress: _hoveredIndex != -1
-                                  ? _hoveredIndex.toDouble()
-                                  : scrollProgress,
-                              pulseValue: _pulseController.value,
-                              brandColor: AppTheme.brandRed,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                    // Cards List
-                    Padding(
-                      padding: const EdgeInsets.only(left: 48.0),
-                      child: Column(
-                        children: List.generate(
-                          StickyWhyTevahSection.stories.length,
-                              (index) {
-                            final story =
-                            StickyWhyTevahSection.stories[index];
-                            final bool isSelected = activeIndex == index;
-                            final bool isHovered = _hoveredIndex == index;
-
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: 28.0,
-                              ),
-                              child: _FuturisticTiltCard(
-                                story: story,
-                                isSelected: isSelected,
-                                isHovered: isHovered,
-                                onHover: (h) {
-                                  setState(() {
-                                    _hoveredIndex = h ? index : -1;
-                                  });
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
     );
   }
 }
@@ -2276,8 +2295,8 @@ class _CyberMotherboardPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CyberMotherboardPainter oldDelegate) =>
       oldDelegate.scrollProgress != scrollProgress ||
-          oldDelegate.activeIndex != activeIndex ||
-          oldDelegate.pulseValue != pulseValue;
+      oldDelegate.activeIndex != activeIndex ||
+      oldDelegate.pulseValue != pulseValue;
 }
 
 // ============================================================================
@@ -2372,16 +2391,16 @@ class _FuturisticTiltCardState extends State<_FuturisticTiltCard> {
                 ),
                 boxShadow: highlighted
                     ? [
-                  BoxShadow(
-                    color: AppTheme.brandRed.withOpacity(0.22),
-                    blurRadius: 40,
-                    offset: const Offset(0, 14),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.8),
-                    blurRadius: 30,
-                  ),
-                ]
+                        BoxShadow(
+                          color: AppTheme.brandRed.withOpacity(0.22),
+                          blurRadius: 40,
+                          offset: const Offset(0, 14),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.8),
+                          blurRadius: 30,
+                        ),
+                      ]
                     : [],
               ),
               child: ClipRRect(
@@ -2564,7 +2583,7 @@ class AiCenterpieceSection extends StatefulWidget {
       'label': 'INGESTION',
       'title': 'Raw Multimodal Stream',
       'desc':
-      'Real-time extraction across vector stores, APIs & unstructured data.',
+          'Real-time extraction across vector stores, APIs & unstructured data.',
       'icon': Icons.input_rounded,
     },
     {
@@ -2586,7 +2605,7 @@ class AiCenterpieceSection extends StatefulWidget {
       'label': 'IMPACT OUTPUT',
       'title': 'High-Leverage Results',
       'desc':
-      'Direct business intelligence insights and zero-friction execution.',
+          'Direct business intelligence insights and zero-friction execution.',
       'icon': Icons.auto_awesome_rounded,
     },
   ];
@@ -2639,11 +2658,11 @@ class _AiCenterpieceSectionState extends State<AiCenterpieceSection>
 
     const double triggerOffset = 3800.0;
     final double scrollProgress =
-    ((widget.scrollOffset - triggerOffset) / 500.0).clamp(0.0, 1.0);
+        ((widget.scrollOffset - triggerOffset) / 500.0).clamp(0.0, 1.0);
 
     final int autoActiveStep =
-    (scrollProgress * (AiCenterpieceSection.pipelineSteps.length - 1))
-        .round();
+        (scrollProgress * (AiCenterpieceSection.pipelineSteps.length - 1))
+            .round();
     final int currentStep = _selectedStep.clamp(
       0,
       AiCenterpieceSection.pipelineSteps.length - 1,
@@ -2809,7 +2828,7 @@ class _AiCenterpieceSectionState extends State<AiCenterpieceSection>
                 Column(
                   children: List.generate(
                     AiCenterpieceSection.pipelineSteps.length,
-                        (index) {
+                    (index) {
                       final item = AiCenterpieceSection.pipelineSteps[index];
                       final bool isSelected = _selectedStep == index;
 
@@ -2829,7 +2848,7 @@ class _AiCenterpieceSectionState extends State<AiCenterpieceSection>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
                     AiCenterpieceSection.pipelineSteps.length * 2 - 1,
-                        (i) {
+                    (i) {
                       if (i.isOdd) {
                         final int stepIndex = i ~/ 2;
                         final bool active = stepIndex < _selectedStep;
@@ -2985,12 +3004,12 @@ class _PipelineNodeCard extends StatelessWidget {
             ),
             boxShadow: isSelected
                 ? [
-              BoxShadow(
-                color: AppTheme.brandRed.withOpacity(0.4),
-                blurRadius: 18,
-                offset: const Offset(0, 4),
-              ),
-            ]
+                    BoxShadow(
+                      color: AppTheme.brandRed.withOpacity(0.4),
+                      blurRadius: 18,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
                 : [],
           ),
           child: Row(
@@ -3042,12 +3061,12 @@ class _InteractivePipelineConnector extends StatelessWidget {
         color: isActive ? AppTheme.brandRed : Colors.white12,
         boxShadow: isActive
             ? [
-          BoxShadow(
-            color: AppTheme.brandRed.withOpacity(0.8),
-            blurRadius: 8,
-            spreadRadius: 1,
-          ),
-        ]
+                BoxShadow(
+                  color: AppTheme.brandRed.withOpacity(0.8),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ]
             : [],
       ),
     );
@@ -3475,12 +3494,12 @@ class _ImpactBentoCardState extends State<_ImpactBentoCard> {
           ),
           boxShadow: _isHovered
               ? [
-            BoxShadow(
-              color: AppTheme.brandRed.withOpacity(0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ]
+                  BoxShadow(
+                    color: AppTheme.brandRed.withOpacity(0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
               : [],
         ),
         child: Column(
@@ -3543,8 +3562,9 @@ class _ImpactBentoCardState extends State<_ImpactBentoCard> {
   }
 }
 
+
 // ============================================================================
-// ELEVATED TESTIMONIALS & SOCIAL PROOF SECTION
+// TESTIMONIALS SECTION
 // ============================================================================
 
 class TestimonialsSection extends StatefulWidget {
@@ -3597,17 +3617,16 @@ class TestimonialsSection extends StatefulWidget {
 
 class _TestimonialsSectionState extends State<TestimonialsSection> {
   final ScrollController _cardsScrollController = ScrollController();
-  int _activeCardIndex = 0;
 
   void _scrollNext() {
     if (_cardsScrollController.hasClients) {
-      final double target = (_cardsScrollController.offset + 440).clamp(
+      final double target = (_cardsScrollController.offset + 460).clamp(
         0.0,
         _cardsScrollController.position.maxScrollExtent,
       );
       _cardsScrollController.animateTo(
         target,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutCubic,
       );
     }
@@ -3615,13 +3634,13 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
 
   void _scrollPrev() {
     if (_cardsScrollController.hasClients) {
-      final double target = (_cardsScrollController.offset - 440).clamp(
+      final double target = (_cardsScrollController.offset - 460).clamp(
         0.0,
         _cardsScrollController.position.maxScrollExtent,
       );
       _cardsScrollController.animateTo(
         target,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutCubic,
       );
     }
@@ -3644,7 +3663,6 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section Header & Navigation Controls
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -3686,8 +3704,6 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                   ),
                 ],
               ),
-
-              // Navigation Arrow Controls (Desktop)
               if (!isMobile)
                 Row(
                   children: [
@@ -3704,28 +3720,34 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                 ),
             ],
           ),
-
-          const SizedBox(height: 36),
-
-          // Horizontal Cards Carousel
+          const SizedBox(height: 16),
           SingleChildScrollView(
             controller: _cardsScrollController,
             scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
             physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: List.generate(
-                TestimonialsSection.testimonials.length,
-                    (index) {
-                  final t = TestimonialsSection.testimonials[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 24.0, bottom: 8.0),
-                    child: _TestimonialCard(
-                      data: t,
-                      isMobile: isMobile,
-                      onHover: widget.onHoverItem,
-                    ),
-                  );
-                },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: List.generate(
+                  TestimonialsSection.testimonials.length,
+                      (index) {
+                    final t = TestimonialsSection.testimonials[index];
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        right: index == TestimonialsSection.testimonials.length - 1
+                            ? 48.0
+                            : 24.0,
+                      ),
+                      child: _TestimonialCard(
+                        data: t,
+                        isMobile: isMobile,
+                        onHover: widget.onHoverItem,
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -3736,7 +3758,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
 }
 
 // ============================================================================
-// INDIVIDUAL TESTIMONIAL CARD WITH SPECULAR SHEEN
+// ELEVATED RISE-UP CARD (ZERO OVERFLOW)
 // ============================================================================
 
 class _TestimonialCard extends StatefulWidget {
@@ -3760,11 +3782,11 @@ class _TestimonialCardState extends State<_TestimonialCard> {
 
   @override
   Widget build(BuildContext context) {
-    final double cardWidth = widget.isMobile
-        ? MediaQuery.of(context).size.width * 0.84
-        : 480;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double cardWidth = widget.isMobile ? (screenWidth * 0.82) : 440.0;
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) {
         setState(() => _isHovered = true);
         widget.onHover(true);
@@ -3778,203 +3800,201 @@ class _TestimonialCardState extends State<_TestimonialCard> {
       },
       onHover: (e) => setState(() => _localCursor = e.localPosition),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutBack,
         width: cardWidth,
-        transform: Matrix4.translationValues(0, _isHovered ? -6 : 0, 0),
-        padding: EdgeInsets.all(widget.isMobile ? 24 : 36),
+        // Reduced minHeight for a compact, balanced card profile
+        constraints: BoxConstraints(
+          minHeight: widget.isMobile ? 220.0 : 240.0,
+        ),
+        transform: Matrix4.translationValues(0, _isHovered ? -10.0 : 0.0, 0),
+        // Compact vertical padding
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.isMobile ? 20 : 26,
+          vertical: widget.isMobile ? 18 : 22,
+        ),
         decoration: BoxDecoration(
-          color: _isHovered ? const Color(0xFF141419) : AppTheme.darkCard,
-          borderRadius: BorderRadius.circular(24),
+          color: _isHovered ? const Color(0xFF15151C) : AppTheme.darkCard,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _isHovered
-                ? AppTheme.brandRed.withOpacity(0.7)
+                ? AppTheme.brandRed.withOpacity(0.85)
                 : AppTheme.greyBorder,
             width: _isHovered ? 1.5 : 1.0,
           ),
-          boxShadow: _isHovered
-              ? [
+          boxShadow: [
             BoxShadow(
-              color: AppTheme.brandRed.withOpacity(0.18),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
+              color: _isHovered
+                  ? AppTheme.brandRed.withOpacity(0.22)
+                  : Colors.black.withOpacity(0.35),
+              blurRadius: _isHovered ? 32 : 14,
+              spreadRadius: _isHovered ? 2 : 0,
+              offset: Offset(0, _isHovered ? 12 : 6),
             ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.6),
-              blurRadius: 20,
-            ),
-          ]
-              : [],
+          ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(23),
-          child: Stack(
-            children: [
-              // Subtle background watermark quote
-              Positioned(
-                right: -10,
-                top: -20,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Watermark quote
+            Positioned(
+              right: -8,
+              top: -16,
+              child: IgnorePointer(
                 child: Text(
                   '“',
                   style: TextStyle(
                     fontFamily: 'Thunder',
-                    fontSize: 160,
+                    fontSize: 130,
                     fontWeight: FontWeight.w900,
                     color: Colors.white.withOpacity(0.02),
                     height: 1.0,
                   ),
                 ),
               ),
-
-              // Specular mouse sheen
-              if (_isHovered && _localCursor != Offset.zero)
-                Positioned.fill(
+            ),
+            if (_isHovered && _localCursor != Offset.zero)
+              Positioned.fill(
+                child: IgnorePointer(
                   child: CustomPaint(
                     painter: _TestimonialGlarePainter(cursorPos: _localCursor),
                   ),
                 ),
-
-              // Content layout
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Row: Stars + Impact Badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 5 Stars
-                      Row(
-                        children: List.generate(
-                          5,
-                              (i) => const Padding(
-                            padding: EdgeInsets.only(right: 3.0),
-                            child: Icon(
-                              Icons.star_rounded,
-                              color: AppTheme.brandRed,
-                              size: 16,
-                            ),
+              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top row: Stars & Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: List.generate(
+                        5,
+                            (i) => const Padding(
+                          padding: EdgeInsets.only(right: 3.0),
+                          child: Icon(
+                            Icons.star_rounded,
+                            color: AppTheme.brandRed,
+                            size: 15,
                           ),
                         ),
                       ),
-
-                      // Quantified Impact Chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.brandRed.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: AppTheme.brandRed.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Text(
-                          widget.data['impact'] as String,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Quote Body
-                  Text(
-                    '"${widget.data['quote']}"',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: widget.isMobile ? 15 : 18,
-                      height: 1.6,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.92),
                     ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  const Divider(color: Colors.white10, height: 1),
-
-                  const SizedBox(height: 20),
-
-                  // Author Info Block
-                  Row(
-                    children: [
-                      // Initials Avatar Ring
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.04),
-                          border: Border.all(
-                            color: _isHovered
-                                ? AppTheme.brandRed
-                                : Colors.white12,
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.brandRed.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: AppTheme.brandRed.withOpacity(0.35),
                         ),
-                        child: Center(
-                          child: Text(
-                            widget.data['avatar'] as String,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: _isHovered ? Colors.white : Colors.white60,
-                            ),
+                      ),
+                      child: Text(
+                        widget.data['impact'] as String,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9.0,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Quote
+                Text(
+                  '"${widget.data['quote']}"',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: widget.isMobile ? 13.5 : 15.0,
+                    height: 1.5,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.92),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                const Divider(color: Colors.white10, height: 1),
+                const SizedBox(height: 12),
+
+                // Author Row
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.04),
+                        border: Border.all(
+                          color: _isHovered
+                              ? AppTheme.brandRed
+                              : Colors.white12,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          widget.data['avatar'] as String,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: _isHovered ? Colors.white : Colors.white60,
                           ),
                         ),
                       ),
-
-                      const SizedBox(width: 14),
-
-                      // Details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
                                   widget.data['author'] as String,
+                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
-                                    letterSpacing: 1.0,
+                                    letterSpacing: 0.7,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                const Icon(
-                                  Icons.verified_rounded,
-                                  size: 13,
-                                  color: Color(0xFF10B981),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              "${widget.data['role']} • ${widget.data['company']}",
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white38,
-                                letterSpacing: 0.5,
                               ),
+                              const SizedBox(width: 5),
+                              const Icon(
+                                Icons.verified_rounded,
+                                size: 12,
+                                color: Color(0xFF10B981),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "${widget.data['role']} • ${widget.data['company']}",
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white38,
+                              letterSpacing: 0.3,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -4012,7 +4032,9 @@ class _TestimonialNavButtonState extends State<_TestimonialNavButton> {
           height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _hovered ? AppTheme.brandRed : Colors.white.withOpacity(0.04),
+            color: _hovered
+                ? AppTheme.brandRed
+                : Colors.white.withOpacity(0.04),
             border: Border.all(
               color: _hovered ? AppTheme.brandRed : Colors.white12,
             ),

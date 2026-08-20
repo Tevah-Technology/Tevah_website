@@ -708,11 +708,15 @@ class _ApproachTimelineSection extends StatelessWidget {
           const SizedBox(height: 36),
           if (isMobile)
             Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: List.generate(stages.length, (index) {
                 final stage = stages[index];
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
-                  child: _ApproachHoverCard(stage: stage),
+                  child: _ApproachHoverCard(
+                    stage: stage,
+                  ),
                 );
               }),
             )
@@ -721,6 +725,7 @@ class _ApproachTimelineSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: List.generate(stages.length, (index) {
                 final stage = stages[index];
+
                 return Expanded(
                   child: _ApproachHoverCard(
                     stage: stage,
@@ -737,7 +742,9 @@ class _ApproachTimelineSection extends StatelessWidget {
 class _ApproachHoverCard extends StatefulWidget {
   final Map<String, dynamic> stage;
 
-  const _ApproachHoverCard({required this.stage});
+  const _ApproachHoverCard({
+    required this.stage,
+  });
 
   @override
   State<_ApproachHoverCard> createState() => _ApproachHoverCardState();
@@ -752,54 +759,85 @@ class _ApproachHoverCardState extends State<_ApproachHoverCard> {
     final bool isMobile = screenWidth < 768;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        if (!isMobile) {
+          setState(() => _isHovered = true);
+        }
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
-        margin: EdgeInsets.only(right: isMobile ? 0 : 24),
-        padding: EdgeInsets.all(isMobile ? 20 : 32),
-        transform: Matrix4.translationValues(0, _isHovered ? -8 : 0, 0),
+
+        margin: EdgeInsets.only(
+          right: isMobile ? 0 : 24,
+        ),
+
+        padding: EdgeInsets.all(
+          isMobile ? 22 : 32,
+        ),
+
+        transform: Matrix4.translationValues(
+          0,
+          _isHovered ? -8 : 0,
+          0,
+        ),
+
         decoration: BoxDecoration(
-          color: _isHovered ? AppTheme.darkSurface : AppTheme.darkCard,
+          color: _isHovered
+              ? AppTheme.darkSurface
+              : AppTheme.darkCard,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _isHovered ? AppTheme.brandRed.withOpacity(0.5) : AppTheme.greyBorder,
+            color: _isHovered
+                ? AppTheme.brandRed.withOpacity(0.5)
+                : AppTheme.greyBorder,
           ),
         ),
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.stage['num'],
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.brandRed,
+                letterSpacing: 1.0,
               ),
             ),
+
             const SizedBox(height: 12),
+
             Text(
               widget.stage['title'],
               style: GoogleFonts.plusJakartaSans(
-                fontSize: isMobile ? 18 : 22,
+                fontSize: isMobile ? 20 : 22,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 16),
-            ...((widget.stage['items'] as List<String>).map((item) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(
-                  '• $item',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: Colors.white70,
+
+            const SizedBox(height: 18),
+
+            ...((widget.stage['items'] as List<String>).map(
+                  (item) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: Text(
+                    '• $item',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: isMobile ? 13 : 13,
+                      height: 1.35,
+                      color: Colors.white70,
+                    ),
                   ),
-                ),
-              );
-            })),
+                );
+              },
+            )),
           ],
         ),
       ),
@@ -1129,73 +1167,149 @@ class _InteractiveTeamSection extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: padding),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // remove upper column and uncomment
         children: [
-          Text(
-            'TEAM',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.white38,
-            ),
-          ),
-          const SizedBox(height: 36),
-          if (isMobile)
-            Column(
-              children: [
-                _Team3DCardItem(
-                  name: 'James David',
-                  role: 'CEO & Founder',
-                  imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-                  onHoverItem: onHoverItem,
-                ),
-                const SizedBox(height: 20),
-                _Team3DCardItem(
-                  name: 'Brenda C. Janet',
-                  role: 'Lead Developer',
-                  imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
-                  onHoverItem: onHoverItem,
-                ),
-                const SizedBox(height: 20),
-                _Team3DCardItem(
-                  name: 'Martin Carlos',
-                  role: 'Lead Designer',
-                  imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-                  onHoverItem: onHoverItem,
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: _Team3DCardItem(
-                    name: 'James David',
-                    role: 'CEO & Founder',
-                    imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-                    onHoverItem: onHoverItem,
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: _Team3DCardItem(
-                    name: 'Brenda C. Janet',
-                    role: 'Lead Developer',
-                    imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
-                    onHoverItem: onHoverItem,
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: _Team3DCardItem(
-                    name: 'Martin Carlos',
-                    role: 'Lead Designer',
-                    imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-                    onHoverItem: onHoverItem,
-                  ),
-                ),
-              ],
-            ),
+          // Column(
+          //   crossAxisAlignment: CrossAxisAlignment.start,
+          //   children: [
+          //     Text(
+          //       'TEAM',
+          //       style: GoogleFonts.plusJakartaSans(
+          //         fontSize: 11,
+          //         fontWeight: FontWeight.bold,
+          //         color: Colors.white38,
+          //       ),
+          //     ),
+          //     const SizedBox(height: 36),
+          //     if (isMobile)
+          //       Column(
+          //         children: [
+          //           _Team3DCardItem(
+          //             name: 'Shyju Satheeshan',
+          //             role: 'Lead Designer',
+          //             imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //           const SizedBox(height: 20),
+          //           _Team3DCardItem(
+          //             name: 'James David',
+          //             role: 'CEO & Founder',
+          //             imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //           const SizedBox(height: 20),
+          //           _Team3DCardItem(
+          //             name: 'Brenda C. Janet',
+          //             role: 'Lead Developer',
+          //             imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //           const SizedBox(height: 20),
+          //           _Team3DCardItem(
+          //             name: 'Martin Carlos',
+          //             role: 'Lead Designer',
+          //             imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //           const SizedBox(height: 20),
+          //           _Team3DCardItem(
+          //             name: 'Martin Carlos',
+          //             role: 'Lead Designer',
+          //             imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //           const SizedBox(height: 20),
+          //           _Team3DCardItem(
+          //             name: 'Martin Carlos',
+          //             role: 'Lead Designer',
+          //             imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //           const SizedBox(height: 20),
+          //           _Team3DCardItem(
+          //             name: 'Martin Carlos',
+          //             role: 'Lead Designer',
+          //             imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //           const SizedBox(height: 20),
+          //           _Team3DCardItem(
+          //             name: 'Martin Carlos',
+          //             role: 'Lead Designer',
+          //             imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //             onHoverItem: onHoverItem,
+          //           ),
+          //
+          //         ],
+          //       )
+          //     else
+          //       Row(
+          //         children: [
+          //           Expanded(
+          //             child: _Team3DCardItem(
+          //               name: 'Shyju',
+          //               role: 'Founder',
+          //               imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //               onHoverItem: onHoverItem,
+          //             ),
+          //           ),
+          //           const SizedBox(width: 20),
+          //           Expanded(
+          //             child: _Team3DCardItem(
+          //               name: 'Geetha',
+          //               role: '  ',
+          //               imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+          //               onHoverItem: onHoverItem,
+          //             ),
+          //           ),
+          //           const SizedBox(width: 20),
+          //           Expanded(
+          //             child: _Team3DCardItem(
+          //               name: 'Jojin',
+          //               role: 'Developer',
+          //               imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //               onHoverItem: onHoverItem,
+          //             ),
+          //           ),
+          //           const SizedBox(width: 20),
+          //           Expanded(
+          //             child: _Team3DCardItem(
+          //               name: 'Febin',
+          //               role: 'Designer',
+          //               imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //               onHoverItem: onHoverItem,
+          //             ),
+          //           ),
+          //           const SizedBox(width: 20),
+          //           Expanded(
+          //             child: _Team3DCardItem(
+          //               name: 'Milan',
+          //               role: 'Developer',
+          //               imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //               onHoverItem: onHoverItem,
+          //             ),
+          //           ), const SizedBox(width: 20),
+          //           Expanded(
+          //             child: _Team3DCardItem(
+          //               name: 'Godwin',
+          //               role: 'Designer',
+          //               imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //               onHoverItem: onHoverItem,
+          //             ),
+          //           ),
+          //           const SizedBox(width: 20),
+          //           Expanded(
+          //             child: _Team3DCardItem(
+          //               name: 'Akhil',
+          //               role: 'Developer',
+          //               imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+          //               onHoverItem: onHoverItem,
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //   ],
+          // ),
         ],
       ),
     );

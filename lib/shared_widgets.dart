@@ -4,13 +4,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tevahweb/portfolio_availability.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'about_screen.dart';
 import 'dropbox.dart';
 import 'home_screen.dart';
-import 'about_screen.dart';
+import 'legal_screen.dart';
 import 'letstalk.dart';
 import 'portfolio_screen.dart';
 
@@ -26,30 +28,24 @@ enum NavRoute {
   solutions,
   capabilities,
   contact,
+  legal,
 }
 
 // ============================================================================
 // CENTRAL BRAND PALETTE
-// RED, BLACK & CHARCOAL GREY
 // ============================================================================
 
 abstract class AppTheme {
   static const Color brandRed = Color(0xFFa02928);
-
   static const Color darkBackground = Color(0xFF0A0A0B);
-
   static const Color darkCard = Color(0xFF141416);
-
   static const Color darkSurface = Color(0xFF18181D);
-
   static const Color greyBorder = Colors.white10;
-
   static const Color targetCream = Color(0xFFE0E0E0);
 }
 
 // ============================================================================
 // TEVAH NAVBAR
-// RESPONSIVE TOP NAVIGATION
 // ============================================================================
 
 class TevahNavbar extends StatefulWidget {
@@ -63,29 +59,17 @@ class TevahNavbar extends StatefulWidget {
 }
 
 class _TevahNavbarState extends State<TevahNavbar> {
-  // Portfolio starts hidden.
-  //
-  // It will only become true after the API successfully confirms
-  // that the portfolio is available.
   bool _portfolioAvailable = false;
-
   bool _checkingPortfolio = true;
 
   @override
   void initState() {
     super.initState();
-
     _checkPortfolioAvailability();
   }
 
-  // ==========================================================================
-  // CHECK PORTFOLIO API
-  // ==========================================================================
-
   Future<void> _checkPortfolioAvailability() async {
     try {
-      print('Checking portfolio availability...');
-
       final bool available =
       await PortfolioAvailabilityService.isPortfolioAvailable();
 
@@ -95,8 +79,6 @@ class _TevahNavbarState extends State<TevahNavbar> {
         _portfolioAvailable = available;
         _checkingPortfolio = false;
       });
-
-      print('Portfolio availability result: $_portfolioAvailable');
     } catch (e) {
       if (!mounted) return;
 
@@ -104,75 +86,38 @@ class _TevahNavbarState extends State<TevahNavbar> {
         _portfolioAvailable = false;
         _checkingPortfolio = false;
       });
-
-      print('Portfolio availability check failed: $e');
     }
   }
 
-  // ==========================================================================
-  // NAVIGATION
-  // ==========================================================================
-
   void _navigate(BuildContext context, NavRoute target) {
-    if (target == widget.currentRoute) {
-      return;
-    }
+    if (target == widget.currentRoute) return;
 
-    // ------------------------------------------------------------------------
-    // IMPORTANT:
-    // Never allow Portfolio navigation if API says unavailable.
-    // ------------------------------------------------------------------------
-
-    if (target == NavRoute.portfolio && !_portfolioAvailable) {
-      print('Portfolio navigation blocked because portfolio is unavailable.');
-      return;
-    }
-
-    // ------------------------------------------------------------------------
-    // DROPBOX
-    // ------------------------------------------------------------------------
+    if (target == NavRoute.portfolio && !_portfolioAvailable) return;
 
     if (target == NavRoute.dropbox) {
       Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (context) => const DropboxPage()));
-
       return;
     }
 
-    Widget page;
-
     switch (target) {
       case NavRoute.home:
-        page = const MainAgencyScreen();
+        context.go('/home');
         break;
-
       case NavRoute.about:
-        page = const AboutScreen();
+        context.go('/about');
         break;
-
       case NavRoute.portfolio:
-        page = const PortfolioScreen();
+        context.go('/portfolio');
         break;
-
+      case NavRoute.legal:
+        context.go('/terms-and-conditions');
+        break;
       default:
-        return;
+        break;
     }
-
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => page,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
   }
-
-  // ==========================================================================
-  // MOBILE MENU
-  // ==========================================================================
 
   void _openMobileMenu(BuildContext context) {
     showModalBottomSheet(
@@ -189,9 +134,6 @@ class _TevahNavbarState extends State<TevahNavbar> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ----------------------------------------------------------------
-              // HEADER
-              // ----------------------------------------------------------------
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -206,68 +148,42 @@ class _TevahNavbarState extends State<TevahNavbar> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
-
               const SizedBox(height: 24),
-
-              // ----------------------------------------------------------------
-              // HOME
-              // ----------------------------------------------------------------
               _MobileNavItem(
                 text: 'Home',
                 isActive: widget.currentRoute == NavRoute.home,
                 onTap: () {
                   Navigator.of(context).pop();
-
                   _navigate(context, NavRoute.home);
                 },
               ),
-
-              // ----------------------------------------------------------------
-              // ABOUT
-              // ----------------------------------------------------------------
               _MobileNavItem(
                 text: 'About Us',
                 isActive: widget.currentRoute == NavRoute.about,
                 onTap: () {
                   Navigator.of(context).pop();
-
                   _navigate(context, NavRoute.about);
                 },
               ),
-
-              // ----------------------------------------------------------------
-              // PORTFOLIO
-              //
-              // ONLY SHOW WHEN API CONFIRMS AVAILABILITY
-              // ----------------------------------------------------------------
               if (_portfolioAvailable)
                 _MobileNavItem(
                   text: 'Portfolio',
                   isActive: widget.currentRoute == NavRoute.portfolio,
                   onTap: () {
                     Navigator.of(context).pop();
-
                     _navigate(context, NavRoute.portfolio);
                   },
                 ),
-
               const SizedBox(height: 24),
-
-              // ----------------------------------------------------------------
-              // LET'S TALK
-              // ----------------------------------------------------------------
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-
                     openLetsTalkModal(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -294,16 +210,10 @@ class _TevahNavbarState extends State<TevahNavbar> {
     );
   }
 
-  // ==========================================================================
-  // BUILD NAVBAR
-  // ==========================================================================
-
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-
     final bool isMobile = screenWidth < 900;
-
     final double horizontalPadding = isMobile ? 16.0 : 48.0;
 
     return Padding(
@@ -314,15 +224,10 @@ class _TevahNavbarState extends State<TevahNavbar> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // ==================================================================
-          // LOGO
-          // ==================================================================
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () {
-                _navigate(context, NavRoute.home);
-              },
+              onTap: () => _navigate(context, NavRoute.home),
               child: Row(
                 children: [
                   Container(
@@ -345,9 +250,7 @@ class _TevahNavbarState extends State<TevahNavbar> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 10),
-
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -375,10 +278,6 @@ class _TevahNavbarState extends State<TevahNavbar> {
               ),
             ),
           ),
-
-          // ==================================================================
-          // MOBILE NAVIGATION
-          // ==================================================================
           if (isMobile) ...[
             IconButton(
               icon: const Icon(
@@ -386,15 +285,9 @@ class _TevahNavbarState extends State<TevahNavbar> {
                 color: Colors.white,
                 size: 28,
               ),
-              onPressed: () {
-                _openMobileMenu(context);
-              },
+              onPressed: () => _openMobileMenu(context),
             ),
-          ]
-          // ==================================================================
-          // DESKTOP NAVIGATION
-          // ==================================================================
-          else ...[
+          ] else ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
@@ -404,67 +297,34 @@ class _TevahNavbarState extends State<TevahNavbar> {
               ),
               child: Row(
                 children: [
-                  // ------------------------------------------------------------
-                  // HOME
-                  // ------------------------------------------------------------
                   _NavItem(
                     text: 'Home',
                     isActive: widget.currentRoute == NavRoute.home,
-                    onTap: () {
-                      _navigate(context, NavRoute.home);
-                    },
-                    onHover: (h) {
-                      widget.onHoverItem?.call(h);
-                    },
+                    onTap: () => _navigate(context, NavRoute.home),
+                    onHover: (h) => widget.onHoverItem?.call(h),
                   ),
-
                   const SizedBox(width: 24),
-
-                  // ------------------------------------------------------------
-                  // ABOUT
-                  // ------------------------------------------------------------
                   _NavItem(
                     text: 'About Us',
                     isActive: widget.currentRoute == NavRoute.about,
-                    onTap: () {
-                      _navigate(context, NavRoute.about);
-                    },
-                    onHover: (h) {
-                      widget.onHoverItem?.call(h);
-                    },
+                    onTap: () => _navigate(context, NavRoute.about),
+                    onHover: (h) => widget.onHoverItem?.call(h),
                   ),
-
-                  // ------------------------------------------------------------
-                  // PORTFOLIO
-                  //
-                  // ONLY CREATE THE NAV ITEM IF AVAILABLE
-                  // ------------------------------------------------------------
                   if (_portfolioAvailable) ...[
                     const SizedBox(width: 24),
-
                     _NavItem(
                       text: 'Portfolio',
                       isActive: widget.currentRoute == NavRoute.portfolio,
-                      onTap: () {
-                        _navigate(context, NavRoute.portfolio);
-                      },
-                      onHover: (h) {
-                        widget.onHoverItem?.call(h);
-                      },
+                      onTap: () => _navigate(context, NavRoute.portfolio),
+                      onHover: (h) => widget.onHoverItem?.call(h),
                     ),
                   ],
                 ],
               ),
             ),
-
-            // =================================================================
-            // LET'S TALK
-            // =================================================================
             _MagneticPillButton(
               label: "Let's Talk",
-              onHover: (h) {
-                widget.onHoverItem?.call(h);
-              },
+              onHover: (h) => widget.onHoverItem?.call(h),
             ),
           ],
         ],
@@ -538,17 +398,11 @@ class _NavItemState extends State<_NavItem> {
           ? SystemMouseCursors.click
           : SystemMouseCursors.basic,
       onEnter: (_) {
-        setState(() {
-          _hovered = true;
-        });
-
+        setState(() => _hovered = true);
         widget.onHover(true);
       },
       onExit: (_) {
-        setState(() {
-          _hovered = false;
-        });
-
+        setState(() => _hovered = false);
         widget.onHover(false);
       },
       child: GestureDetector(
@@ -590,23 +444,15 @@ class _MagneticPillButtonState extends State<_MagneticPillButton> {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) {
-        setState(() {
-          _hovered = true;
-        });
-
+        setState(() => _hovered = true);
         widget.onHover(true);
       },
       onExit: (_) {
-        setState(() {
-          _hovered = false;
-        });
-
+        setState(() => _hovered = false);
         widget.onHover(false);
       },
       child: GestureDetector(
-        onTap: () {
-          openLetsTalkModal(context);
-        },
+        onTap: () => openLetsTalkModal(context),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -667,19 +513,14 @@ class HeroGridBackgroundPainter extends CustomPainter {
     }
 
     final math.Random rand = math.Random(42);
-
     final Paint particlePaint = Paint()..color = Colors.white.withOpacity(0.18);
 
     for (int i = 0; i < 40; i++) {
       final double x = rand.nextDouble() * size.width;
-
       final double initialY = rand.nextDouble() * size.height;
-
       final double speed = 20 + rand.nextDouble() * 40;
-
       final double y =
           (initialY - animationProgress * speed * 20) % size.height;
-
       final double radius = 1.0 + rand.nextDouble() * 2.0;
 
       canvas.drawCircle(Offset(x, y), radius, particlePaint);
@@ -695,7 +536,18 @@ class HeroGridBackgroundPainter extends CustomPainter {
 // ============================================================================
 
 class AgencyFooter extends StatefulWidget {
-  const AgencyFooter({super.key});
+  final String careersUrl;
+  final String whatsappNumber;
+  final ScrollController? scrollController;
+  final VoidCallback? onBackToTop;
+
+  const AgencyFooter({
+    super.key,
+    this.careersUrl = 'https://tevah.technology/careers',
+    this.whatsappNumber = '919188075549',
+    this.scrollController,
+    this.onBackToTop,
+  });
 
   @override
   State<AgencyFooter> createState() => _AgencyFooterState();
@@ -706,12 +558,35 @@ class _AgencyFooterState extends State<AgencyFooter> {
   bool _isCopied = false;
 
   void _scrollToTop(BuildContext context) {
-    final ScrollController? primaryController = PrimaryScrollController.of(
-      context,
-    );
+    if (widget.onBackToTop != null) {
+      widget.onBackToTop!();
+      return;
+    }
 
+    if (widget.scrollController != null &&
+        widget.scrollController!.hasClients) {
+      widget.scrollController!.animateTo(
+        0,
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOutCubic,
+      );
+      return;
+    }
+
+    final ScrollController? primaryController =
+    PrimaryScrollController.maybeOf(context);
     if (primaryController != null && primaryController.hasClients) {
       primaryController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOutCubic,
+      );
+      return;
+    }
+
+    final ScrollableState? scrollable = Scrollable.maybeOf(context);
+    if (scrollable != null && scrollable.position.hasContentDimensions) {
+      scrollable.position.animateTo(
         0,
         duration: const Duration(milliseconds: 900),
         curve: Curves.easeInOutCubic,
@@ -720,19 +595,59 @@ class _AgencyFooterState extends State<AgencyFooter> {
   }
 
   void _copyEmail() {
-    Clipboard.setData(const ClipboardData(text: 'support@tevah.technology'));
-
-    setState(() {
-      _isCopied = true;
-    });
+    Clipboard.setData(const ClipboardData(text: 'info@tevah.technology'));
+    setState(() => _isCopied = true);
 
     Timer(const Duration(seconds: 2), () {
       if (mounted) {
-        setState(() {
-          _isCopied = false;
-        });
+        setState(() => _isCopied = false);
       }
     });
+  }
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _openMediaConsultationWhatsApp() async {
+    final String cleanNumber =
+    widget.whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    const String msg =
+        'Hello TEVAH team, I would like to request a free consultation for our media and digital needs.';
+    final String encodedMsg = Uri.encodeComponent(msg);
+    final Uri url = Uri.parse('https://wa.me/$cleanNumber?text=$encodedMsg');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _openWorkRequestModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) =>
+          _WorkRequestModal(whatsappNumber: widget.whatsappNumber),
+    );
+  }
+
+  void _navigateToLegal(BuildContext context, LegalSection section) {
+    switch (section) {
+      case LegalSection.terms:
+        context.go('/terms-and-conditions');
+        break;
+      case LegalSection.privacy:
+        context.go('/privacy-policy');
+        break;
+      case LegalSection.refund:
+        context.go('/refund-and-cancellation');
+        break;
+      case LegalSection.contact:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+    }
   }
 
   @override
@@ -740,6 +655,7 @@ class _AgencyFooterState extends State<AgencyFooter> {
     final double screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 768;
     final double padding = isMobile ? 20.0 : 56.0;
+    final int currentYear = DateTime.now().year;
 
     return MouseRegion(
       onHover: (e) {
@@ -757,7 +673,7 @@ class _AgencyFooterState extends State<AgencyFooter> {
               ),
             ),
 
-            // Giant Background Watermark
+            // Background Watermark
             Positioned(
               bottom: isMobile ? 60 : 40,
               left: 0,
@@ -789,30 +705,29 @@ class _AgencyFooterState extends State<AgencyFooter> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Status Live Indicator
                       const _AvailabilityStatusBadge(),
-
                       const SizedBox(height: 28),
-
                       if (isMobile) ...[
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _BrandSummary(),
-
-                            const SizedBox(height: 32),
-
+                            const SizedBox(height: 24),
                             _EmailInteractiveBentoCard(
                               isCopied: _isCopied,
                               onCopy: _copyEmail,
                             ),
-
+                            const SizedBox(height: 24),
+                            _FooterActionCards(
+                              onCareersTap: () => _launchURL(widget.careersUrl),
+                              onWorkRequestTap: () =>
+                                  _openWorkRequestModal(context),
+                              onConsultationTap:
+                              _openMediaConsultationWhatsApp,
+                            ),
                             const SizedBox(height: 36),
-
                             const _ServicesGridSection(),
-
                             const SizedBox(height: 36),
-
                             _SocialConnectSection(),
                           ],
                         ),
@@ -826,26 +741,29 @@ class _AgencyFooterState extends State<AgencyFooter> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _BrandSummary(),
-
-                                  const SizedBox(height: 32),
-
+                                  const SizedBox(height: 28),
                                   _EmailInteractiveBentoCard(
                                     isCopied: _isCopied,
                                     onCopy: _copyEmail,
                                   ),
+                                  const SizedBox(height: 20),
+                                  _FooterActionCards(
+                                    onCareersTap: () =>
+                                        _launchURL(widget.careersUrl),
+                                    onWorkRequestTap: () =>
+                                        _openWorkRequestModal(context),
+                                    onConsultationTap:
+                                    _openMediaConsultationWhatsApp,
+                                  ),
                                 ],
                               ),
                             ),
-
                             const Spacer(flex: 1),
-
                             const Expanded(
                               flex: 4,
                               child: _ServicesGridSection(),
                             ),
-
                             const SizedBox(width: 48),
-
                             Expanded(
                               flex: 3,
                               child: _SocialConnectSection(),
@@ -853,31 +771,55 @@ class _AgencyFooterState extends State<AgencyFooter> {
                           ],
                         ),
                       ],
-
                       SizedBox(height: isMobile ? 48 : 80),
-
                       const Divider(color: AppTheme.greyBorder),
-
                       const SizedBox(height: 24),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Copyright & Interactive Legal Anchor Links
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 16,
+                        runSpacing: 16,
                         children: [
-                          Expanded(
-                            child: Text(
-                              '© 2026 TEVAH TECH SOLUTIONS PRIVATE LIMITED',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: isMobile ? 10 : 12,
-                                color: Colors.white30,
-                                letterSpacing: 0.5,
-                              ),
+                          Text(
+                            '© $currentYear TEVAH TECH SOLUTIONS PRIVATE LIMITED',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: isMobile ? 10 : 12,
+                              color: Colors.white30,
+                              letterSpacing: 0.5,
                             ),
                           ),
-
+                          Wrap(
+                            spacing: 18,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              _LegalFooterLink(
+                                title: 'Terms & Conditions',
+                                onTap: () => _navigateToLegal(
+                                  context,
+                                  LegalSection.terms,
+                                ),
+                              ),
+                              _LegalFooterLink(
+                                title: 'Privacy Policy',
+                                onTap: () => _navigateToLegal(
+                                  context,
+                                  LegalSection.privacy,
+                                ),
+                              ),
+                              _LegalFooterLink(
+                                title: 'Refund & Cancellation',
+                                onTap: () => _navigateToLegal(
+                                  context,
+                                  LegalSection.refund,
+                                ),
+                              ),
+                            ],
+                          ),
                           _BackToTopButton(
-                            onTap: () {
-                              _scrollToTop(context);
-                            },
+                            onTap: () => _scrollToTop(context),
                           ),
                         ],
                       ),
@@ -887,6 +829,776 @@ class _AgencyFooterState extends State<AgencyFooter> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// FOOTER LEGAL LINK WITH GLOWING BULLET INDICATOR
+// ============================================================================
+
+class _LegalFooterLink extends StatefulWidget {
+  final String title;
+  final VoidCallback onTap;
+
+  const _LegalFooterLink({required this.title, required this.onTap});
+
+  @override
+  State<_LegalFooterLink> createState() => _LegalFooterLinkState();
+}
+
+class _LegalFooterLinkState extends State<_LegalFooterLink> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _hovered ? AppTheme.brandRed : Colors.white24,
+                boxShadow: _hovered
+                    ? [
+                  BoxShadow(
+                    color: AppTheme.brandRed.withOpacity(0.8),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ]
+                    : [],
+              ),
+            ),
+            const SizedBox(width: 8),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: _hovered ? FontWeight.w600 : FontWeight.w500,
+                color: _hovered ? Colors.white : Colors.white54,
+                decoration:
+                _hovered ? TextDecoration.underline : TextDecoration.none,
+                decorationColor: AppTheme.brandRed,
+              ),
+              child: Text(widget.title),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// WORK REQUEST MODAL (DISPATCHES TO WHATSAPP)
+// ============================================================================
+
+class _WorkRequestModal extends StatefulWidget {
+  final String whatsappNumber;
+  const _WorkRequestModal({required this.whatsappNumber});
+
+  @override
+  State<_WorkRequestModal> createState() => _WorkRequestModalState();
+}
+
+class _WorkRequestModalState extends State<_WorkRequestModal> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _companyController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _detailsController = TextEditingController();
+
+  String _selectedService = 'Web Development';
+  String _selectedPriority = 'Medium';
+  DateTime? _selectedDueDate;
+
+  final List<String> _services = [
+    'Web Development',
+    'Mobile Apps',
+    'AI & Automation',
+    'UI / UX Design',
+    'Video & Motion',
+    'Brand Identity',
+    'WordPress',
+  ];
+
+  final List<String> _priorities = ['High', 'Medium', 'Low'];
+
+  Future<void> _pickDueDate(BuildContext context) async {
+    final DateTime initialDate =
+        _selectedDueDate ?? DateTime.now().add(const Duration(days: 7));
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppTheme.brandRed,
+              onPrimary: Colors.white,
+              surface: Color(0xFF18181D),
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF141416),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDueDate = picked;
+      });
+    }
+  }
+
+  Future<void> _sendWorkRequestToWhatsApp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final String clientName = _nameController.text.trim();
+    final String company = _companyController.text.trim().isEmpty
+        ? 'Individual'
+        : _companyController.text.trim();
+    final String email = _emailController.text.trim();
+    final String dueDateStr = _selectedDueDate != null
+        ? '${_selectedDueDate!.day.toString().padLeft(2, '0')}/${_selectedDueDate!.month.toString().padLeft(2, '0')}/${_selectedDueDate!.year}'
+        : 'Flexible / Not specified';
+    final String details = _detailsController.text.trim();
+
+    final String formattedMessage = '''
+*📩 NEW WORK REQUEST [TEVAH PORTAL]*
+━━━━━━━━━━━━━━━━━━━━━
+*📌 Service Required:* $_selectedService
+*👤 Client / Contact:* $clientName
+*🏢 Company / Organization:* $company
+*📧 Email Address:* $email
+*⚡ Priority Level:* $_selectedPriority
+*📅 Target Due Date:* $dueDateStr
+
+*📝 Project Scope & Details:*
+$details
+
+━━━━━━━━━━━━━━━━━━━━━
+_Sent via TEVAH Work Request Dispatcher_
+''';
+
+    final String cleanNumber =
+    widget.whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    final String encodedMsg = Uri.encodeComponent(formattedMessage);
+    final Uri url = Uri.parse('https://wa.me/$cleanNumber?text=$encodedMsg');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _companyController.dispose();
+    _emailController.dispose();
+    _detailsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 650;
+
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: isMobile ? screenWidth * 0.92 : 560,
+          constraints: const BoxConstraints(maxHeight: 740),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111114),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.brandRed.withOpacity(0.4)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.8),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.brandRed,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'T',
+                              style: TextStyle(
+                                fontFamily: 'Thunder',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 22,
+                                color: Colors.white,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'WORK INQUIRY REQUEST',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.brandRed,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              Text(
+                                'Submit Project Brief',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white54),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'SELECT SERVICE',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedService,
+                    dropdownColor: const Color(0xFF18181D),
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.04),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                        const BorderSide(color: AppTheme.greyBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                        const BorderSide(color: AppTheme.greyBorder),
+                      ),
+                    ),
+                    items: _services.map((s) {
+                      return DropdownMenuItem(value: s, child: Text(s));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedService = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _nameController,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Your Name *',
+                            labelStyle: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.04),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                              const BorderSide(color: AppTheme.greyBorder),
+                            ),
+                          ),
+                          validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _companyController,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Company / Org',
+                            labelStyle: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.04),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                              const BorderSide(color: AppTheme.greyBorder),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _emailController,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Email Address *',
+                      labelStyle: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.04),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                        const BorderSide(color: AppTheme.greyBorder),
+                      ),
+                    ),
+                    validator: (v) => v == null || !v.contains('@')
+                        ? 'Valid email required'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedPriority,
+                          dropdownColor: const Color(0xFF18181D),
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Priority',
+                            labelStyle: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.04),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                              const BorderSide(color: AppTheme.greyBorder),
+                            ),
+                          ),
+                          items: _priorities.map((p) {
+                            return DropdownMenuItem(
+                              value: p,
+                              child: Text('$p Priority'),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedPriority = val);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _pickDueDate(context),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppTheme.greyBorder),
+                            ),
+                            child: Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Due Date',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        color: Colors.white38,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _selectedDueDate != null
+                                          ? '${_selectedDueDate!.day}/${_selectedDueDate!.month}/${_selectedDueDate!.year}'
+                                          : 'Select Date',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _selectedDueDate != null
+                                            ? Colors.white
+                                            : Colors.white60,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 16,
+                                  color: AppTheme.brandRed,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _detailsController,
+                    maxLines: 3,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Project Brief / Scope Details *',
+                      labelStyle: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.04),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                        const BorderSide(color: AppTheme.greyBorder),
+                      ),
+                    ),
+                    validator: (v) => v == null || v.isEmpty
+                        ? 'Please describe your request'
+                        : null,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _sendWorkRequestToWhatsApp,
+                      icon: const FaIcon(
+                        FontAwesomeIcons.whatsapp,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      label: Text(
+                        'Dispatch Request via WhatsApp',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// FOOTER - ACTION CARDS
+// ============================================================================
+
+class _FooterActionCards extends StatelessWidget {
+  final VoidCallback onCareersTap;
+  final VoidCallback onWorkRequestTap;
+  final VoidCallback onConsultationTap;
+
+  const _FooterActionCards({
+    required this.onCareersTap,
+    required this.onWorkRequestTap,
+    required this.onConsultationTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _QuickActionCard(
+          title: 'Free Media Consultation',
+          subtitle: 'Audit, strategy & production advisory for your brand',
+          icon: Icons.video_camera_front_outlined,
+          onTap: onConsultationTap,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionCard(
+                title: 'Job Portal',
+                subtitle: 'Join the team',
+                icon: Icons.work_outline_rounded,
+                isCompact: true,
+                onTap: onCareersTap,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionCard(
+                title: 'Work Request',
+                subtitle: 'Inquire via WhatsApp',
+                icon: Icons.post_add_rounded,
+                isCompact: true,
+                badgeText: 'DISPATCH',
+                badgeColor: const Color(0xFF25D366),
+                onTap: onWorkRequestTap,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionCard extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isCompact;
+  final String? badgeText;
+  final Color? badgeColor;
+
+  const _QuickActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+    this.isCompact = false,
+    this.badgeText,
+    this.badgeColor,
+  });
+
+  @override
+  State<_QuickActionCard> createState() => _QuickActionCardState();
+}
+
+class _QuickActionCardState extends State<_QuickActionCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: widget.isCompact ? 12 : 14,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(_isHovered ? 0.05 : 0.02),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isHovered
+                  ? (widget.badgeColor ?? AppTheme.brandRed).withOpacity(0.6)
+                  : AppTheme.greyBorder,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _isHovered
+                      ? (widget.badgeColor ?? AppTheme.brandRed).withOpacity(0.2)
+                      : Colors.white.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  widget.icon,
+                  size: 16,
+                  color: _isHovered
+                      ? (widget.badgeColor ?? AppTheme.brandRed)
+                      : Colors.white70,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            widget.title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (widget.badgeText != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: widget.badgeColor?.withOpacity(0.2) ??
+                                  AppTheme.brandRed.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: widget.badgeColor?.withOpacity(0.4) ??
+                                    AppTheme.brandRed.withOpacity(0.4),
+                              ),
+                            ),
+                            child: Text(
+                              widget.badgeText!,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: widget.badgeColor ?? AppTheme.brandRed,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: Colors.white38,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_outward_rounded,
+                size: 14,
+                color: _isHovered
+                    ? (widget.badgeColor ?? AppTheme.brandRed)
+                    : Colors.white24,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1015,9 +1727,7 @@ class _BrandSummary extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: 12),
-
         Text(
           'Technology. Creativity. Intelligence.\nCrafting future-ready digital platforms and experiences.',
           style: GoogleFonts.plusJakartaSans(
@@ -1049,7 +1759,8 @@ class _EmailInteractiveBentoCard extends StatefulWidget {
       _EmailInteractiveBentoCardState();
 }
 
-class _EmailInteractiveBentoCardState extends State<_EmailInteractiveBentoCard> {
+class _EmailInteractiveBentoCardState
+    extends State<_EmailInteractiveBentoCard> {
   bool _isHovered = false;
 
   @override
@@ -1104,7 +1815,7 @@ class _EmailInteractiveBentoCardState extends State<_EmailInteractiveBentoCard> 
               children: [
                 Expanded(
                   child: Text(
-                    'support@tevah.technology',
+                    'info@tevah.technology',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
@@ -1248,22 +1959,14 @@ class _ServiceTagState extends State<_ServiceTag> {
 // FOOTER SOCIAL CONNECT
 // ============================================================================
 
-// ============================================================================
-// FOOTER SOCIAL CONNECT
-// ============================================================================
-
 class _SocialConnectSection extends StatelessWidget {
   static const List<Map<String, dynamic>> socials = [
     {
       'name': 'Instagram',
       'icon': FontAwesomeIcons.instagram,
-      'url': 'https://www.instagram.com/tevahtechsolutions?igsh=eXV0dDBneXh5ejJw',
+      'url':
+      'https://www.instagram.com/tevahtechsolutions?igsh=eXV0dDBneXh5ejJw',
     },
-    // {
-    //   'name': 'LinkedIn',
-    //   'icon': FontAwesomeIcons.linkedin,
-    //   'url': 'https://linkedin.com',
-    // },
   ];
 
   @override
@@ -1387,16 +2090,8 @@ class _BackToTopButtonState extends State<_BackToTopButton> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) {
-        setState(() {
-          _isHovered = true;
-        });
-      },
-      onExit: (_) {
-        setState(() {
-          _isHovered = false;
-        });
-      },
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
@@ -1423,9 +2118,7 @@ class _BackToTopButtonState extends State<_BackToTopButton> {
                   letterSpacing: 1.5,
                 ),
               ),
-
               const SizedBox(width: 8),
-
               AnimatedRotation(
                 turns: _isHovered ? -0.125 : 0.0,
                 duration: const Duration(milliseconds: 250),
@@ -1445,7 +2138,6 @@ class _BackToTopButtonState extends State<_BackToTopButton> {
 
 // ============================================================================
 // FLOATING WHATSAPP BUTTON
-// GLOBAL OVERLAY
 // ============================================================================
 
 class FloatingWhatsAppButton extends StatefulWidget {
@@ -1454,23 +2146,25 @@ class FloatingWhatsAppButton extends StatefulWidget {
 
   const FloatingWhatsAppButton({
     super.key,
-    this.phoneNumber = '9188075549',
+    this.phoneNumber = '919188075549',
     this.defaultMessage =
     'Hello TEVAH team, I would like to discuss a project!',
   });
 
   @override
-  State<FloatingWhatsAppButton> createState() => _FloatingWhatsAppButtonState();
+  State<FloatingWhatsAppButton> createState() =>
+      _FloatingWhatsAppButtonState();
 }
 
 class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
   bool _isHovered = false;
 
   Future<void> _openWhatsApp() async {
+    final String cleanNumber =
+    widget.phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
     final String encodedMsg = Uri.encodeComponent(widget.defaultMessage);
-
     final Uri url = Uri.parse(
-      'https://wa.me/${widget.phoneNumber}?text=$encodedMsg',
+      'https://wa.me/$cleanNumber?text=$encodedMsg',
     );
 
     if (await canLaunchUrl(url)) {
@@ -1481,7 +2175,6 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-
     final bool isMobile = screenWidth < 768;
 
     return Positioned(
@@ -1489,16 +2182,8 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
       right: isMobile ? 16 : 32,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) {
-          setState(() {
-            _isHovered = true;
-          });
-        },
-        onExit: (_) {
-          setState(() {
-            _isHovered = false;
-          });
-        },
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
         child: GestureDetector(
           onTap: _openWhatsApp,
           child: AnimatedContainer(
@@ -1531,7 +2216,6 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton> {
                   color: Colors.white,
                   size: 28,
                 ),
-
                 if (_isHovered && !isMobile) ...[
                   const SizedBox(width: 10),
                   Text(
@@ -1565,8 +2249,7 @@ class FooterAtmospherePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint glowPaint = Paint()
-      ..shader =
-      RadialGradient(
+      ..shader = RadialGradient(
         colors: [AppTheme.brandRed.withOpacity(0.12), Colors.transparent],
       ).createShader(
         Rect.fromCircle(
